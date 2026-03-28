@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POSTIE RUN - Deliver or Die Trying</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            image-rendering: -moz-crisp-edges;
+            cursor: none;
+            /* Scale to fit window while maintaining aspect ratio */
+            max-width: 100vw;
+            max-height: 100vh;
+            width: auto;
+            height: auto;
+        }
+        /* Scanline overlay for extra retro feel */
+        #scanlines {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.03) 2px,
+                rgba(0,0,0,0.03) 4px
+            );
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game" width="320" height="240"></canvas>
+    <div id="scanlines"></div>
+
+    <!-- Game scripts in dependency order -->
+    <script src="js/constants.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/sprites.js"></script>
+    <script src="js/sprites-enemies.js"></script>
+    <script src="js/sprites-effects.js"></script>
+    <script src="js/sprites-env.js"></script>
+    <script src="js/particles.js"></script>
+    <script src="js/entity.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/projectiles.js"></script>
+    <script src="js/pickups.js"></script>
+    <script src="js/enemies.js"></script>
+    <script src="js/level.js"></script>
+    <script src="js/levels/level-data.js"></script>
+    <script src="js/hud.js"></script>
+    <script src="js/menu.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/game.js"></script>
+
+    <script>
+        // Boot the game
+        window.addEventListener('load', function() {
+            var canvas = document.getElementById('game');
+
+            // Scale canvas to 3x (960x720) or fit window
+            function resizeCanvas() {
+                var windowW = window.innerWidth;
+                var windowH = window.innerHeight;
+                var scale = Math.min(
+                    Math.floor(windowW / 320),
+                    Math.floor(windowH / 240)
+                );
+                scale = Math.max(scale, 1);
+                canvas.style.width = (320 * scale) + 'px';
+                canvas.style.height = (240 * scale) + 'px';
+            }
+
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // Start the game
+            PR.Game.init(canvas);
+        });
+    </script>
+</body>
+</html>
