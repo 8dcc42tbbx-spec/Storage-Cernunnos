@@ -13,7 +13,10 @@ PR.Level = {
             grid: [],
             cols: 0,
             rows: 0,
-            theme: 0
+            theme: 0,
+            isSolid: function(col, row) {
+                return PR.Level._isSolid(col, row);
+            }
         };
     },
 
@@ -219,26 +222,27 @@ PR.Level = {
 
     _renderBackground: function(ctx) {
         var pal = PR.CONST.PALETTES[this.data.theme];
+        var camX = PR.Camera.x;
 
-        // Sky gradient
-        var skyGrad = ctx.createLinearGradient(0, 0, 0, PR.CONST.CANVAS_H);
+        // Sky gradient (drawn in screen space, offset by camera)
+        var skyGrad = ctx.createLinearGradient(camX, 0, camX, PR.CONST.CANVAS_H);
         skyGrad.addColorStop(0, pal.sky);
         skyGrad.addColorStop(1, pal.skyBottom);
         ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, PR.CONST.CANVAS_W, PR.CONST.CANVAS_H);
+        ctx.fillRect(camX, 0, PR.CONST.CANVAS_W, PR.CONST.CANVAS_H);
 
-        // Sun (outback has bigger sun)
+        // Sun (fixed in screen space)
         if (this.data.theme === PR.CONST.THEME_OUTBACK) {
-            PR.SpriteCache.draw(ctx, 'sun', 260, 15, false);
+            PR.SpriteCache.draw(ctx, 'sun', camX + 260, 15, false);
         } else {
-            PR.SpriteCache.draw(ctx, 'sun', 270, 20, false);
+            PR.SpriteCache.draw(ctx, 'sun', camX + 270, 20, false);
         }
 
         // Clouds (parallax 0.1)
         var cloudOffset = PR.Camera.parallaxX(0.05);
         for (var c = 0; c < 8; c++) {
-            var cx = (c * 120 + 20) - (cloudOffset % (8 * 120));
-            if (cx > -40 && cx < PR.CONST.CANVAS_W + 40) {
+            var cx = camX + (c * 120 + 20) - (cloudOffset % (8 * 120));
+            if (cx > camX - 40 && cx < camX + PR.CONST.CANVAS_W + 40) {
                 PR.SpriteCache.draw(ctx, 'cloud', cx, 15 + (c % 3) * 12, false);
             }
         }
@@ -332,10 +336,11 @@ PR.Level = {
     }
 };
 
-// Tilemap helper
-PR.Level.tilemap.isSolid = function(col, row) {
-    if (!PR.Level.tilemap.grid) return false;
-    if (row < 0 || row >= PR.Level.tilemap.rows) return false;
-    if (col < 0 || col >= PR.Level.tilemap.cols) return false;
-    return PR.Level.tilemap.grid[row][col] > 0;
+// Tilemap isSolid helper - defined as standalone function since tilemap is null until init()
+PR.Level._isSolid = function(col, row) {
+    var tm = PR.Level.tilemap;
+    if (!tm || !tm.grid) return false;
+    if (row < 0 || row >= tm.rows) return false;
+    if (col < 0 || col >= tm.cols) return false;
+    return tm.grid[row][col] > 0;
 };
