@@ -117,7 +117,7 @@ PR.Game = {
                 PR.Pickups.update();
                 PR.Particles.update();
                 PR.Level.update();
-                PR.Camera.update(PR.Player.x);
+                PR.Camera.update(PR.Player.x, PR.Player.y);
                 PR.HUD.update();
 
                 this._checkPlayerCollisions();
@@ -279,59 +279,59 @@ PR.Game = {
         if (!PR.Level.data) return;
         var theme = PR.Level.data.theme;
         var wp = this.weatherParticles;
+        var vw = PR.Camera.viewW;
+        var vh = PR.Camera.viewH;
 
         // Cap weather particles
         if (wp.length > 60) wp.splice(0, wp.length - 60);
 
         switch (theme) {
             case PR.CONST.THEME_SUBURBAN:
-                // Butterflies - small colored dots that float
                 if (this.frameCount % 90 === 0) {
                     wp.push({
-                        type: 'butterfly', x: PR.Camera.x + PR.CONST.CANVAS_W + 10,
-                        y: PR.Utils.randInt(40, 160), vx: -PR.Utils.randFloat(0.3, 0.8),
+                        type: 'butterfly', x: PR.Camera.x + vw + 10,
+                        y: PR.Camera.y + PR.Utils.randInt(10, Math.floor(vh * 0.7)),
+                        vx: -PR.Utils.randFloat(0.3, 0.8),
                         vy: 0, timer: 300, color: PR.Utils.randChoice(['#FFAA00','#FF44AA','#44AAFF','#AAFF44']),
                         phase: Math.random() * Math.PI * 2
                     });
                 }
                 break;
             case PR.CONST.THEME_URBAN:
-                // Rain
                 if (this.frameCount % 2 === 0) {
                     wp.push({
-                        type: 'rain', x: PR.Camera.x + PR.Utils.randInt(0, PR.CONST.CANVAS_W),
-                        y: -5, vx: -1, vy: PR.Utils.randFloat(4, 7), timer: 80,
+                        type: 'rain', x: PR.Camera.x + PR.Utils.randInt(0, Math.floor(vw)),
+                        y: PR.Camera.y - 5, vx: -1, vy: PR.Utils.randFloat(4, 7), timer: 80,
                         color: '#8899CC'
                     });
                 }
                 break;
             case PR.CONST.THEME_REGIONAL:
-                // Dust motes
                 if (this.frameCount % 30 === 0) {
                     wp.push({
-                        type: 'mote', x: PR.Camera.x + PR.Utils.randInt(0, PR.CONST.CANVAS_W),
-                        y: PR.Utils.randInt(20, 200), vx: PR.Utils.randFloat(-0.2, 0.3),
+                        type: 'mote', x: PR.Camera.x + PR.Utils.randInt(0, Math.floor(vw)),
+                        y: PR.Camera.y + PR.Utils.randInt(10, Math.floor(vh * 0.8)),
+                        vx: PR.Utils.randFloat(-0.2, 0.3),
                         vy: PR.Utils.randFloat(-0.1, 0.1), timer: 200,
                         color: '#D4C890', phase: Math.random() * Math.PI * 2
                     });
                 }
                 break;
             case PR.CONST.THEME_COASTAL:
-                // Sea spray from right
                 if (this.frameCount % 8 === 0) {
                     wp.push({
-                        type: 'spray', x: PR.Camera.x + PR.CONST.CANVAS_W + 5,
-                        y: PR.Utils.randInt(180, 230), vx: -PR.Utils.randFloat(1, 3),
+                        type: 'spray', x: PR.Camera.x + vw + 5,
+                        y: PR.Camera.y + PR.Utils.randInt(Math.floor(vh * 0.7), Math.floor(vh)),
+                        vx: -PR.Utils.randFloat(1, 3),
                         vy: PR.Utils.randFloat(-1, -0.2), timer: 60,
                         color: PR.Utils.randChoice(['#88DDFF','#AAEEFF','#FFFFFF'])
                     });
                 }
                 break;
             case PR.CONST.THEME_OUTBACK:
-                // Tumbleweeds
                 if (this.frameCount % 300 === 0) {
                     wp.push({
-                        type: 'tumbleweed', x: PR.Camera.x + PR.CONST.CANVAS_W + 10,
+                        type: 'tumbleweed', x: PR.Camera.x + vw + 10,
                         y: PR.Level.data.groundY * PR.CONST.TILE_SIZE - 8,
                         vx: -PR.Utils.randFloat(1, 2.5), vy: 0, timer: 400,
                         color: '#8B6914', phase: 0, size: PR.Utils.randInt(4, 8)
@@ -356,7 +356,7 @@ PR.Game = {
                 p.phase += 0.03;
                 p.vx = Math.sin(p.phase) * 0.15;
             }
-            if (p.timer <= 0 || p.y > PR.CONST.CANVAS_H + 20) {
+            if (p.timer <= 0 || p.y > PR.Camera.y + vh + 20) {
                 wp.splice(i, 1);
             }
         }

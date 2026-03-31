@@ -6,6 +6,7 @@ PR.CONST = {
     CANVAS_W: 320,
     CANVAS_H: 240,
     SCALE: 3,
+    ZOOM: 2.5,
     TILE_SIZE: 16,
 
     // Physics

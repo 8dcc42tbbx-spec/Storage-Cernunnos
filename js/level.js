@@ -126,7 +126,7 @@ PR.Level = {
         // Check spawns
         while (this.spawnIndex < this.data.spawns.length) {
             var spawn = this.data.spawns[this.spawnIndex];
-            if (spawn.x <= PR.Camera.x + PR.CONST.CANVAS_W + 48) {
+            if (spawn.x <= PR.Camera.x + PR.Camera.viewW + 48) {
                 this._doSpawn(spawn);
                 this.spawnIndex++;
             } else {
@@ -140,10 +140,10 @@ PR.Level = {
             if (this.data.boss && !this.bossSpawned) {
                 this.bossSpawned = true;
                 PR.Enemies.spawn(this.data.boss.type,
-                    PR.Camera.x + PR.CONST.CANVAS_W - 60,
+                    PR.Camera.x + PR.Camera.viewW - 60,
                     this.data.groundY * PR.CONST.TILE_SIZE - 40);
                 // Lock camera for boss fight
-                PR.Camera.levelWidth = PR.Camera.x + PR.CONST.CANVAS_W;
+                PR.Camera.levelWidth = PR.Camera.x + PR.Camera.viewW;
             } else if (!this.data.boss || (this.bossSpawned && this._bossDefeated())) {
                 this.deliveryReached = true;
                 PR.Particles.emit(PR.Player.x + 8, PR.Player.y - 4, 'delivery');
@@ -223,64 +223,68 @@ PR.Level = {
     _renderBackground: function(ctx) {
         var pal = PR.CONST.PALETTES[this.data.theme];
         var camX = PR.Camera.x;
+        var camY = PR.Camera.y;
+        var vw = PR.Camera.viewW;
+        var vh = PR.Camera.viewH;
 
-        // Sky gradient (drawn in screen space, offset by camera)
-        var skyGrad = ctx.createLinearGradient(camX, 0, camX, PR.CONST.CANVAS_H);
+        // Sky gradient (world space, covers full visible area)
+        var skyGrad = ctx.createLinearGradient(0, 0, 0, 200);
         skyGrad.addColorStop(0, pal.sky);
         skyGrad.addColorStop(1, pal.skyBottom);
         ctx.fillStyle = skyGrad;
-        ctx.fillRect(camX, 0, PR.CONST.CANVAS_W, PR.CONST.CANVAS_H);
+        ctx.fillRect(camX, camY, vw + 1, vh + 1);
 
-        // Sun (fixed in screen space)
+        // Sun (fixed relative to viewport)
+        var sunX = camX + vw * 0.85;
         if (this.data.theme === PR.CONST.THEME_OUTBACK) {
-            PR.SpriteCache.draw(ctx, 'sun', camX + 260, 15, false);
+            PR.SpriteCache.draw(ctx, 'sun', sunX, camY + 8, false);
         } else {
-            PR.SpriteCache.draw(ctx, 'sun', camX + 270, 20, false);
+            PR.SpriteCache.draw(ctx, 'sun', sunX, camY + 12, false);
         }
 
-        // Clouds (parallax 0.1)
+        // Clouds (parallax, fixed to sky regardless of vertical scroll)
         var cloudOffset = PR.Camera.parallaxX(0.05);
         for (var c = 0; c < 8; c++) {
-            var cx = camX + (c * 120 + 20) - (cloudOffset % (8 * 120));
-            if (cx > camX - 40 && cx < camX + PR.CONST.CANVAS_W + 40) {
-                PR.SpriteCache.draw(ctx, 'cloud', cx, 15 + (c % 3) * 12, false);
+            var cx = camX + (c * 50 + 10) - (cloudOffset % (8 * 50));
+            if (cx > camX - 40 && cx < camX + vw + 40) {
+                PR.SpriteCache.draw(ctx, 'cloud', cx, camY + 8 + (c % 3) * 8, false);
             }
         }
 
         // Far background layer (parallax 0.2)
         var farOffset = PR.Camera.parallaxX(0.2);
         var thId = this.data.theme;
-        for (var f = 0; f < 20; f++) {
-            var fx = (f * 80) - farOffset;
-            if (fx > -40 && fx < PR.CONST.CANVAS_W + 40) {
-                var groundY = this.data.groundY * PR.CONST.TILE_SIZE;
+        var groundY = this.data.groundY * PR.CONST.TILE_SIZE;
+        for (var f = 0; f < 30; f++) {
+            var fsx = (f * 80) - farOffset;
+            if (fsx > -40 && fsx < vw + 40) {
+                var fwx = camX + fsx;
                 if (thId === PR.CONST.THEME_URBAN) {
-                    PR.SpriteCache.draw(ctx, 'building', fx, groundY - 60, false);
+                    PR.SpriteCache.draw(ctx, 'building', fwx, groundY - 60, false);
                 } else if (thId === PR.CONST.THEME_REGIONAL && f % 4 === 0) {
-                    PR.SpriteCache.draw(ctx, 'silo', fx, groundY - 50, false);
+                    PR.SpriteCache.draw(ctx, 'silo', fwx, groundY - 50, false);
                 } else {
-                    PR.SpriteCache.draw(ctx, 'bg_house_far_' + thId, fx, groundY - 30, false);
+                    PR.SpriteCache.draw(ctx, 'bg_house_far_' + thId, fwx, groundY - 30, false);
                 }
             }
         }
 
         // Near background layer (parallax 0.5)
         var nearOffset = PR.Camera.parallaxX(0.5);
-        for (var n = 0; n < 30; n++) {
-            var nx = (n * 60) - nearOffset;
-            if (nx > -50 && nx < PR.CONST.CANVAS_W + 50) {
-                var gY = this.data.groundY * PR.CONST.TILE_SIZE;
+        for (var n = 0; n < 40; n++) {
+            var nsx = (n * 60) - nearOffset;
+            if (nsx > -50 && nsx < vw + 50) {
+                var nwx = camX + nsx;
                 if (n % 3 === 0) {
-                    // Tree
                     var treeKey;
                     if (thId === PR.CONST.THEME_OUTBACK) treeKey = 'dead_tree';
                     else if (thId === PR.CONST.THEME_COASTAL) treeKey = 'palm_tree';
                     else treeKey = 'bg_tree_' + thId;
-                    PR.SpriteCache.draw(ctx, treeKey, nx, gY - 34, false);
+                    PR.SpriteCache.draw(ctx, treeKey, nwx, groundY - 34, false);
                 } else if (n % 3 === 1) {
-                    PR.SpriteCache.draw(ctx, 'bg_house_near_' + thId, nx, gY - 36, false);
+                    PR.SpriteCache.draw(ctx, 'bg_house_near_' + thId, nwx, groundY - 36, false);
                 } else {
-                    PR.SpriteCache.draw(ctx, 'bg_fence_' + thId, nx, gY - 16, false);
+                    PR.SpriteCache.draw(ctx, 'bg_fence_' + thId, nwx, groundY - 16, false);
                 }
             }
         }
@@ -288,11 +292,14 @@ PR.Level = {
 
     _renderTilemap: function(ctx) {
         var tm = this.tilemap;
-        var startCol = Math.floor(PR.Camera.x / PR.CONST.TILE_SIZE);
-        var endCol = startCol + Math.ceil(PR.CONST.CANVAS_W / PR.CONST.TILE_SIZE) + 1;
+        var ts = PR.CONST.TILE_SIZE;
+        var startCol = Math.floor(PR.Camera.x / ts);
+        var endCol = startCol + Math.ceil(PR.Camera.viewW / ts) + 1;
+        var startRow = Math.max(0, Math.floor(PR.Camera.y / ts));
+        var endRow = Math.min(tm.rows - 1, startRow + Math.ceil(PR.Camera.viewH / ts) + 1);
         var thId = tm.theme;
 
-        for (var r = 0; r < tm.rows; r++) {
+        for (var r = startRow; r <= endRow; r++) {
             for (var c = startCol; c <= endCol && c < tm.cols; c++) {
                 if (c < 0) continue;
                 var tile = tm.grid[r][c];
@@ -317,7 +324,7 @@ PR.Level = {
         var dx = this.data.width - 40;
         var dy = this.data.groundY * PR.CONST.TILE_SIZE - 32;
 
-        if (dx > PR.Camera.x - 40 && dx < PR.Camera.x + PR.CONST.CANVAS_W + 40) {
+        if (dx > PR.Camera.x - 40 && dx < PR.Camera.x + PR.Camera.viewW + 40) {
             var key = this.data.deliveryType === 'locker' ? 'delivery_locker' : 'delivery_house';
             PR.SpriteCache.draw(ctx, key, dx, dy, false);
 

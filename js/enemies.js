@@ -24,7 +24,7 @@ PR.Enemies = {
                 e.y += e.deathVy;
                 e.deathVy += 0.3;
                 e.dyingTimer++;
-                if (e.dyingTimer > 120 || e.y > PR.CONST.CANVAS_H + 60) {
+                if (e.dyingTimer > 120 || e.y > PR.Camera.y + PR.Camera.viewH + 60) {
                     e.alive = false;
                     e.dying = false;
                 }
@@ -140,7 +140,7 @@ PR.Enemy.prototype.update = function() {
     // Remove if far off screen left
     if (this.x < PR.Camera.x - 120) this.alive = false;
     // Remove if fell off world
-    if (this.y > PR.CONST.CANVAS_H + 50) this.alive = false;
+    if (this.y > PR.Camera.y + PR.Camera.viewH + 50) this.alive = false;
 };
 
 PR.Enemy.prototype._resolveGround = function() {
@@ -363,7 +363,7 @@ PR.Enemy.CONFIGS = {
         init: function(params) {
             this.fromRight = params.fromRight !== false;
             if (this.fromRight) {
-                this.x = PR.Camera.x + PR.CONST.CANVAS_W + 20;
+                this.x = PR.Camera.x + PR.Camera.viewW + 20;
                 this.facing = -1;
                 this.vx = -this.speed;
             } else {
@@ -381,7 +381,7 @@ PR.Enemy.CONFIGS = {
             this.vx = this.facing * this.speed;
             // Remove if passed through
             if (this.facing < 0 && this.x < PR.Camera.x - 80) this.alive = false;
-            if (this.facing > 0 && this.x > PR.Camera.x + PR.CONST.CANVAS_W + 80) this.alive = false;
+            if (this.facing > 0 && this.x > PR.Camera.x + PR.Camera.viewW + 80) this.alive = false;
         },
         render: function(ctx) {
             PR.SpriteCache.draw(ctx, 'van', this.x - 2, this.y - 4, this.facing > 0);
@@ -569,7 +569,7 @@ PR.Enemy.CONFIGS = {
             } else if (this.aiState === 'dropping') {
                 this.vy += 0.3;
                 if (this.vy > 5) this.vy = 5;
-                if (this.y > PR.CONST.CANVAS_H + 20) this.alive = false;
+                if (this.y > PR.Camera.y + PR.Camera.viewH + 20) this.alive = false;
             }
         },
         render: function(ctx) {
@@ -582,13 +582,13 @@ PR.Enemy.CONFIGS = {
         w: 60, h: 20, health: 10, score: 1000, speed: 3.5,
         dropChance: 0.5, contactDamage: 3,
         init: function() {
-            this.x = PR.Camera.x + PR.CONST.CANVAS_W + 30;
+            this.x = PR.Camera.x + PR.Camera.viewW + 30;
             this.facing = -1;
             this.honked = false;
         },
         update: function() {
             this.vx = -this.speed;
-            if (!this.honked && this.x < PR.Camera.x + PR.CONST.CANVAS_W + 10) {
+            if (!this.honked && this.x < PR.Camera.x + PR.Camera.viewW + 10) {
                 PR.Audio.play('van_horn');
                 PR.Audio.play('van_horn');
                 this.honked = true;
@@ -737,8 +737,8 @@ PR.Enemy.CONFIGS = {
                 this.x = PR.Camera.x + 20;
                 this.vx = Math.abs(this.vx);
             }
-            if (this.x > PR.Camera.x + PR.CONST.CANVAS_W - this.w - 20) {
-                this.x = PR.Camera.x + PR.CONST.CANVAS_W - this.w - 20;
+            if (this.x > PR.Camera.x + PR.Camera.viewW - this.w - 20) {
+                this.x = PR.Camera.x + PR.Camera.viewW - this.w - 20;
                 this.vx = -Math.abs(this.vx);
             }
         },

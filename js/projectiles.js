@@ -91,8 +91,8 @@ PR.Projectiles = {
             }
 
             // Remove if offscreen
-            if (p.x < PR.Camera.x - 20 || p.x > PR.Camera.x + PR.CONST.CANVAS_W + 20 ||
-                p.y < -20 || p.y > PR.CONST.CANVAS_H + 20) {
+            if (p.x < PR.Camera.x - 20 || p.x > PR.Camera.x + PR.Camera.viewW + 20 ||
+                p.y < PR.Camera.y - 20 || p.y > PR.Camera.y + PR.Camera.viewH + 20) {
                 p.alive = false;
             }
 
@@ -146,8 +146,8 @@ PR.Projectiles = {
             }
 
             // Offscreen removal
-            if (ep.x < PR.Camera.x - 20 || ep.x > PR.Camera.x + PR.CONST.CANVAS_W + 20 ||
-                ep.y > PR.CONST.CANVAS_H + 20) {
+            if (ep.x < PR.Camera.x - 20 || ep.x > PR.Camera.x + PR.Camera.viewW + 20 ||
+                ep.y > PR.Camera.y + PR.Camera.viewH + 20) {
                 ep.alive = false;
             }
 
