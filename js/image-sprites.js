@@ -1,21 +1,20 @@
-// Postie Run - Image-Based Sprite Loading System
-// Loads PNG sprite sheets from assets/ folder and overrides programmatic sprites
-// when available. Falls back silently to PR.SpriteCache if images fail to load.
+// Postie Run - Image-Based Sprite Loading System (v2)
+// Loads PNG sprite sheets from assets/ and scales them to game resolution.
+// Falls back silently to PR.SpriteCache if images fail to load.
+// Gemini images are high-res (~1024px) so we crop + scale to game size.
 
 PR.ImageSprites = {
     loaded: false,
     loading: false,
-    progress: 0,        // 0.0 to 1.0
+    progress: 0,
     totalSheets: 7,
     loadedSheets: 0,
     failedSheets: 0,
-    sheets: {},          // keyed by sheet name -> Image element
-    atlas: {},           // keyed by sprite name -> {sheet, x, y, w, h}
-    enabled: true,       // set false to force programmatic sprites
+    sheets: {},
+    atlas: {},
+    enabled: true,
+    _patched: false,
 
-    // ----------------------------------------------------------------
-    // Sheet definitions - paths relative to project root
-    // ----------------------------------------------------------------
     sheetDefs: {
         player:       'assets/player.png',
         edv:          'assets/edv.png',
@@ -26,17 +25,12 @@ PR.ImageSprites = {
         effects:      'assets/effects.png'
     },
 
-    // ----------------------------------------------------------------
-    // Initialise - begin loading all sprite sheets
-    // ----------------------------------------------------------------
     init: function() {
         if (this.loading || this.loaded) return;
         this.loading = true;
         this.loadedSheets = 0;
         this.failedSheets = 0;
-        this.progress = 0;
 
-        this._buildAtlas();
         this._patchSpriteCache();
 
         var self = this;
@@ -49,10 +43,12 @@ PR.ImageSprites = {
                 img.onload = function() {
                     self.sheets[name] = img;
                     self.loadedSheets++;
+                    console.log('[ImageSprites] Loaded ' + name + ' (' + img.width + 'x' + img.height + ')');
+                    // Build atlas AFTER image loads so we know dimensions
+                    self._buildAtlasForSheet(name, img.width, img.height);
                     self._checkComplete();
                 };
                 img.onerror = function() {
-                    // Sheet not found or failed - that is fine, programmatic fallback
                     self.failedSheets++;
                     self._checkComplete();
                 };
@@ -61,295 +57,321 @@ PR.ImageSprites = {
         }
     },
 
-    // ----------------------------------------------------------------
-    // Check if all sheets have resolved (loaded or failed)
-    // ----------------------------------------------------------------
     _checkComplete: function() {
         var resolved = this.loadedSheets + this.failedSheets;
         this.progress = resolved / this.totalSheets;
         if (resolved >= this.totalSheets) {
             this.loading = false;
             this.loaded = true;
-            if (this.loadedSheets > 0) {
-                console.log('[ImageSprites] Loaded ' + this.loadedSheets + '/' +
-                    this.totalSheets + ' sprite sheets (' +
-                    this.failedSheets + ' unavailable, using fallback).');
-            } else {
-                console.log('[ImageSprites] No sprite sheets found - using programmatic sprites.');
-            }
+            console.log('[ImageSprites] Done: ' + this.loadedSheets + ' loaded, ' + this.failedSheets + ' fallback.');
         }
     },
 
-    // ----------------------------------------------------------------
-    // Draw a sprite from the image atlas
-    // Returns true if drawn, false if not available (caller should fallback)
-    // ----------------------------------------------------------------
+    // Draw sprite from atlas, scaling from source rect to game-size dest rect
+    // atlas entry: { sheet, sx, sy, sw, sh, dw, dh }
     draw: function(ctx, key, x, y, flipX) {
         if (!this.enabled) return false;
-        var entry = this.atlas[key];
-        if (!entry) return false;
-        var img = this.sheets[entry.sheet];
+        var e = this.atlas[key];
+        if (!e) return false;
+        var img = this.sheets[e.sheet];
         if (!img) return false;
 
         x = Math.round(x);
         y = Math.round(y);
+        var dw = e.dw;
+        var dh = e.dh;
 
         if (flipX) {
             ctx.save();
             ctx.scale(-1, 1);
-            ctx.drawImage(img,
-                entry.x, entry.y, entry.w, entry.h,
-                -x - entry.w, y, entry.w, entry.h);
+            ctx.drawImage(img, e.sx, e.sy, e.sw, e.sh, -x - dw, y, dw, dh);
             ctx.restore();
         } else {
-            ctx.drawImage(img,
-                entry.x, entry.y, entry.w, entry.h,
-                x, y, entry.w, entry.h);
+            ctx.drawImage(img, e.sx, e.sy, e.sw, e.sh, x, y, dw, dh);
         }
         return true;
     },
 
-    // ----------------------------------------------------------------
-    // Monkey-patch PR.SpriteCache.draw to try image sprites first
-    // ----------------------------------------------------------------
     _patchSpriteCache: function() {
         if (this._patched) return;
         this._patched = true;
-
         var originalDraw = PR.SpriteCache.draw.bind(PR.SpriteCache);
         var imgSprites = this;
-
         PR.SpriteCache.draw = function(ctx, key, x, y, flipX) {
-            // Try image sprite first
-            if (imgSprites.draw(ctx, key, x, y, flipX)) {
-                return;
-            }
-            // Fall back to programmatic sprite
+            if (imgSprites.draw(ctx, key, x, y, flipX)) return;
             originalDraw(ctx, key, x, y, flipX);
         };
     },
 
-    // ----------------------------------------------------------------
-    // Atlas definition - source rectangles within each sprite sheet
-    //
-    // IMPORTANT: All coordinates below are APPROXIMATE ESTIMATES.
-    // They assume a reasonable sprite sheet layout and will need
-    // adjustment once actual PNG sprite sheets are placed in assets/.
-    //
-    // Format: { sheet: 'sheetName', x, y, w, h }
-    // where x,y is top-left of the source rectangle in the sheet
-    // and w,h is the size to crop.
-    // ----------------------------------------------------------------
-    _buildAtlas: function() {
-        var a = this.atlas;
+    // Helper: define atlas entry with source rect and game-size dest
+    _def: function(key, sheet, sx, sy, sw, sh, dw, dh) {
+        this.atlas[key] = { sheet: sheet, sx: sx, sy: sy, sw: sw, sh: sh, dw: dw, dh: dh };
+    },
 
-        // ============================================================
-        // PLAYER SPRITES - assets/player.png
-        // Expected layout: 16x24 frames in a horizontal strip
-        // Row 0: idle(2), run(4), jump, fall, shoot, crouch, hurt, death(2)
-        // Coordinates assume 16px wide frames, 24px tall
-        // ============================================================
+    // Helper: define atlas entry using percentage-based coordinates
+    // (px, py) = top-left as fraction of image size (0-1)
+    // (pw, ph) = size as fraction of image size (0-1)
+    // (dw, dh) = destination game-pixel size
+    _defPct: function(key, sheet, px, py, pw, ph, dw, dh, imgW, imgH) {
+        this.atlas[key] = {
+            sheet: sheet,
+            sx: Math.round(px * imgW),
+            sy: Math.round(py * imgH),
+            sw: Math.round(pw * imgW),
+            sh: Math.round(ph * imgH),
+            dw: dw, dh: dh
+        };
+    },
 
-        // Idle frames (2 frames)
-        a['player_idle_0']  = { sheet: 'player', x: 0,   y: 0, w: 16, h: 24 };   // approximate
-        a['player_idle_1']  = { sheet: 'player', x: 16,  y: 0, w: 16, h: 24 };   // approximate
+    // Build atlas entries for a specific sheet once we know its dimensions
+    _buildAtlasForSheet: function(sheetName, imgW, imgH) {
+        switch (sheetName) {
+            case 'player': this._buildPlayerAtlas(imgW, imgH); break;
+            case 'edv': this._buildEdvAtlas(imgW, imgH); break;
+            case 'enemies': this._buildEnemiesAtlas(imgW, imgH); break;
+            case 'projectiles': this._buildProjectilesAtlas(imgW, imgH); break;
+            case 'backgrounds': this._buildBackgroundsAtlas(imgW, imgH); break;
+            case 'ui': this._buildUiAtlas(imgW, imgH); break;
+            case 'effects': this._buildEffectsAtlas(imgW, imgH); break;
+        }
+    },
 
-        // Run frames (4 frames)
-        a['player_run_0']   = { sheet: 'player', x: 32,  y: 0, w: 16, h: 24 };   // approximate
-        a['player_run_1']   = { sheet: 'player', x: 48,  y: 0, w: 16, h: 24 };   // approximate
-        a['player_run_2']   = { sheet: 'player', x: 64,  y: 0, w: 16, h: 24 };   // approximate
-        a['player_run_3']   = { sheet: 'player', x: 80,  y: 0, w: 16, h: 24 };   // approximate
+    // ================================================================
+    // PLAYER - Ernie sprite sheet
+    // Layout from Gemini: loose arrangement, roughly:
+    //   Row 1: 2 idle frames (top ~20% of image)
+    //   Row 2: 4 run frames (~20-40%)
+    //   Row 3: 2 jump/crouch frames (~40-55%)
+    //   Row 4: 2 shoot/throw frames (~55-70%)
+    //   Row 5: 1 hurt frame (~70-85%)
+    //   Row 6: 3 death frames (~85-100%)
+    // Each frame is roughly 1/5 to 1/4 of image width
+    // ================================================================
+    _buildPlayerAtlas: function(w, h) {
+        var d = this._defPct.bind(this);
+        // Idle (2 frames, top row)
+        d('player_idle_0', 'player', 0.00, 0.00, 0.22, 0.20, 16, 24, w, h);
+        d('player_idle_1', 'player', 0.22, 0.00, 0.22, 0.20, 16, 24, w, h);
 
-        // Jump / Fall
-        a['player_jump']    = { sheet: 'player', x: 96,  y: 0, w: 16, h: 24 };   // approximate
-        a['player_fall']    = { sheet: 'player', x: 112, y: 0, w: 16, h: 24 };   // approximate
+        // Run (4 frames, second row)
+        d('player_run_0', 'player', 0.00, 0.20, 0.22, 0.20, 16, 24, w, h);
+        d('player_run_1', 'player', 0.22, 0.20, 0.22, 0.20, 16, 24, w, h);
+        d('player_run_2', 'player', 0.44, 0.20, 0.22, 0.20, 16, 24, w, h);
+        d('player_run_3', 'player', 0.66, 0.20, 0.22, 0.20, 16, 24, w, h);
 
-        // Shoot
-        a['player_shoot']   = { sheet: 'player', x: 128, y: 0, w: 16, h: 24 };   // approximate
+        // Jump, Fall (third row)
+        d('player_jump', 'player', 0.00, 0.40, 0.22, 0.18, 16, 24, w, h);
+        d('player_fall', 'player', 0.22, 0.40, 0.22, 0.18, 16, 24, w, h);
 
-        // Crouch
-        a['player_crouch']  = { sheet: 'player', x: 144, y: 0, w: 16, h: 24 };   // approximate
+        // Shoot, Crouch (fourth row)
+        d('player_shoot', 'player', 0.00, 0.55, 0.25, 0.18, 16, 24, w, h);
+        d('player_crouch', 'player', 0.30, 0.55, 0.25, 0.18, 16, 24, w, h);
 
-        // Hurt
-        a['player_hurt']    = { sheet: 'player', x: 160, y: 0, w: 16, h: 24 };   // approximate
+        // Hurt (fifth row)
+        d('player_hurt', 'player', 0.00, 0.72, 0.25, 0.15, 16, 24, w, h);
 
-        // Death frames (2 frames - second is wider/shorter: 24x12 lying down)
-        a['player_die_0']   = { sheet: 'player', x: 176, y: 0,  w: 16, h: 24 };  // approximate
-        a['player_die_1']   = { sheet: 'player', x: 192, y: 12, w: 24, h: 12 };  // approximate
+        // Death frames (bottom)
+        d('player_die_0', 'player', 0.00, 0.85, 0.25, 0.15, 16, 24, w, h);
+        d('player_die_1', 'player', 0.30, 0.85, 0.30, 0.15, 24, 12, w, h);
+    },
 
-        // ============================================================
-        // eDV VEHICLE - assets/edv.png
-        // Expected layout: two 32x20 frames side by side
-        // ============================================================
+    // ================================================================
+    // eDV - Two frames side by side
+    // ================================================================
+    _buildEdvAtlas: function(w, h) {
+        var d = this._defPct.bind(this);
+        d('edv',        'edv', 0.00, 0.05, 0.48, 0.90, 32, 20, w, h);
+        d('edv_manned', 'edv', 0.50, 0.05, 0.48, 0.90, 32, 20, w, h);
+    },
 
-        a['edv']            = { sheet: 'edv', x: 0,  y: 0, w: 32, h: 20 };       // approximate - empty vehicle
-        a['edv_manned']     = { sheet: 'edv', x: 32, y: 0, w: 32, h: 20 };       // approximate - with driver
+    // ================================================================
+    // ENEMIES - Large composite with labeled sections
+    // Layout from Gemini (approximate regions):
+    //   Top-left: dogs, magpies (small sprites)
+    //   Top-right: Amazon van (large)
+    //   Mid-left: person, bin, mower, cat
+    //   Mid-right: emu, drop bear
+    //   Bottom-left: road train
+    //   Bottom-center: rottweiler boss
+    //   Bottom-right: chihuahua
+    // ================================================================
+    _buildEnemiesAtlas: function(w, h) {
+        var d = this._defPct.bind(this);
 
-        // ============================================================
-        // ENEMY SPRITES - assets/enemies.png
-        // Expected layout: rows of enemy types
-        // Row 0 (y=0):   Dogs 16x12, Magpies 16x12, Seagulls 16x12
-        // Row 1 (y=24):  Van 48x28, Persons 16x24
-        // Row 2 (y=56):  Bin 12x16, Sprinkler 12x8, Mower 20x14, Cat 12-14x14
-        // Row 3 (y=80):  Hose 8x8, Emu 20x24, Dropbear 14x14
-        // Row 4 (y=112): Roadtrain 64x24, Boss enemies
-        // ============================================================
+        // Dogs (top-left, 2 frames)
+        d('dog_0', 'enemies', 0.00, 0.00, 0.15, 0.12, 16, 12, w, h);
+        d('dog_1', 'enemies', 0.15, 0.00, 0.15, 0.12, 16, 12, w, h);
 
-        // Dogs (2 frames, 16x12 each)
-        a['dog_0']          = { sheet: 'enemies', x: 0,   y: 0,  w: 16, h: 12 }; // approximate
-        a['dog_1']          = { sheet: 'enemies', x: 16,  y: 0,  w: 16, h: 12 }; // approximate
+        // Magpies (top, after dogs, 2 frames + swoop)
+        d('magpie_0',    'enemies', 0.32, 0.00, 0.10, 0.10, 16, 12, w, h);
+        d('magpie_1',    'enemies', 0.42, 0.00, 0.10, 0.10, 16, 12, w, h);
+        d('magpie_swoop','enemies', 0.52, 0.00, 0.10, 0.12, 16, 16, w, h);
 
-        // Magpies (2 frames + swoop, 16x12 / 16x16)
-        a['magpie_0']       = { sheet: 'enemies', x: 32,  y: 0,  w: 16, h: 12 }; // approximate
-        a['magpie_1']       = { sheet: 'enemies', x: 48,  y: 0,  w: 16, h: 12 }; // approximate
-        a['magpie_swoop']   = { sheet: 'enemies', x: 64,  y: 0,  w: 16, h: 16 }; // approximate
+        // Seagulls - reuse magpie coordinates if no separate seagull in image
+        d('seagull_0', 'enemies', 0.32, 0.00, 0.10, 0.10, 16, 12, w, h);
+        d('seagull_1', 'enemies', 0.42, 0.00, 0.10, 0.10, 16, 12, w, h);
 
-        // Seagulls (2 frames, 16x12)
-        a['seagull_0']      = { sheet: 'enemies', x: 80,  y: 0,  w: 16, h: 12 }; // approximate
-        a['seagull_1']      = { sheet: 'enemies', x: 96,  y: 0,  w: 16, h: 12 }; // approximate
+        // Van (top-right, large)
+        d('van', 'enemies', 0.68, 0.00, 0.30, 0.18, 48, 28, w, h);
 
-        // Van (48x28)
-        a['van']            = { sheet: 'enemies', x: 0,   y: 24, w: 48, h: 28 }; // approximate
+        // Person (mid-left, 2 frames)
+        d('person_0', 'enemies', 0.00, 0.20, 0.12, 0.18, 16, 24, w, h);
+        d('person_1', 'enemies', 0.12, 0.20, 0.12, 0.18, 16, 24, w, h);
 
-        // Persons (2 frames, 16x24)
-        a['person_0']       = { sheet: 'enemies', x: 48,  y: 24, w: 16, h: 24 }; // approximate
-        a['person_1']       = { sheet: 'enemies', x: 64,  y: 24, w: 16, h: 24 }; // approximate
+        // Bin (mid, small)
+        d('bin', 'enemies', 0.26, 0.22, 0.08, 0.14, 12, 16, w, h);
 
-        // Bin (12x16)
-        a['bin']            = { sheet: 'enemies', x: 0,   y: 56, w: 12, h: 16 }; // approximate
+        // Sprinkler
+        d('sprinkler', 'enemies', 0.35, 0.25, 0.08, 0.08, 12, 8, w, h);
 
-        // Sprinkler (12x8)
-        a['sprinkler']      = { sheet: 'enemies', x: 12,  y: 56, w: 12, h: 8 };  // approximate
+        // Mower (mid)
+        d('mower', 'enemies', 0.42, 0.20, 0.14, 0.12, 20, 14, w, h);
 
-        // Mower (20x14)
-        a['mower']          = { sheet: 'enemies', x: 24,  y: 56, w: 20, h: 14 }; // approximate
+        // Cat (mid-right, 2 frames)
+        d('cat_0', 'enemies', 0.00, 0.42, 0.10, 0.12, 12, 14, w, h);
+        d('cat_1', 'enemies', 0.10, 0.42, 0.10, 0.12, 14, 14, w, h);
 
-        // Cat (2 frames: 12x14 sitting, 14x14 swiping)
-        a['cat_0']          = { sheet: 'enemies', x: 44,  y: 56, w: 12, h: 14 }; // approximate
-        a['cat_1']          = { sheet: 'enemies', x: 56,  y: 56, w: 14, h: 14 }; // approximate
+        // Hose
+        d('hose', 'enemies', 0.22, 0.42, 0.06, 0.06, 8, 8, w, h);
 
-        // Hose (8x8)
-        a['hose']           = { sheet: 'enemies', x: 0,   y: 80, w: 8,  h: 8 };  // approximate
+        // Emu (mid-right, 2 frames)
+        d('emu_0', 'enemies', 0.60, 0.28, 0.14, 0.22, 20, 24, w, h);
+        d('emu_1', 'enemies', 0.74, 0.28, 0.14, 0.22, 20, 24, w, h);
 
-        // Emu (2 frames, 20x24)
-        a['emu_0']          = { sheet: 'enemies', x: 8,   y: 80, w: 20, h: 24 }; // approximate
-        a['emu_1']          = { sheet: 'enemies', x: 28,  y: 80, w: 20, h: 24 }; // approximate
+        // Drop bear
+        d('dropbear', 'enemies', 0.88, 0.28, 0.11, 0.14, 14, 14, w, h);
 
-        // Dropbear (14x14)
-        a['dropbear']       = { sheet: 'enemies', x: 48,  y: 80, w: 14, h: 14 }; // approximate
+        // Road train (bottom-left, wide)
+        d('roadtrain', 'enemies', 0.00, 0.58, 0.50, 0.16, 64, 24, w, h);
 
-        // Roadtrain (64x24)
-        a['roadtrain']      = { sheet: 'enemies', x: 0,   y: 112, w: 64, h: 24 }; // approximate
+        // Rottweiler boss (bottom-center, 2 frames, large)
+        d('rottweiler_0', 'enemies', 0.30, 0.65, 0.30, 0.25, 48, 40, w, h);
+        d('rottweiler_1', 'enemies', 0.60, 0.65, 0.30, 0.25, 48, 40, w, h);
 
-        // Boss: Rottweiler (2 frames, 48x40)
-        a['rottweiler_0']   = { sheet: 'enemies', x: 64,  y: 112, w: 48, h: 40 }; // approximate
-        a['rottweiler_1']   = { sheet: 'enemies', x: 112, y: 112, w: 48, h: 40 }; // approximate
+        // Chihuahua (bottom-right, tiny, 2 frames)
+        d('chihuahua_0', 'enemies', 0.82, 0.88, 0.08, 0.08, 10, 8, w, h);
+        d('chihuahua_1', 'enemies', 0.90, 0.88, 0.08, 0.08, 10, 8, w, h);
+    },
 
-        // Mini-boss: Chihuahua (2 frames, 10x8)
-        a['chihuahua_0']    = { sheet: 'enemies', x: 160, y: 112, w: 10, h: 8 };  // approximate
-        a['chihuahua_1']    = { sheet: 'enemies', x: 170, y: 112, w: 10, h: 8 };  // approximate
+    // ================================================================
+    // PROJECTILES & PICKUPS
+    // Top section: projectiles (parcel, cannon, letter, stamps, card, stamp mark)
+    // Bottom section: pickup boxes
+    // ================================================================
+    _buildProjectilesAtlas: function(w, h) {
+        var d = this._defPct.bind(this);
 
-        // ============================================================
-        // PROJECTILES & PICKUPS - assets/projectiles.png
-        // Expected layout:
-        // Row 0: Projectiles - parcel 8x6, cannon 6x5, letter 5x3, stamp(4) 10x10, card 8x6
-        // Row 1: Pickups - cannon 12x10, spray 12x10, stamp 12x10, health 10x10, edv 14x10
-        // Row 2: Stamp mark 14x8
-        // ============================================================
+        // Parcel (top-left)
+        d('proj_parcel', 'projectiles', 0.00, 0.00, 0.10, 0.14, 8, 6, w, h);
+        // Cannon parcel
+        d('proj_cannon', 'projectiles', 0.12, 0.00, 0.10, 0.12, 6, 5, w, h);
+        // Letter
+        d('proj_letter', 'projectiles', 0.24, 0.00, 0.08, 0.08, 5, 3, w, h);
 
-        // Projectiles
-        a['proj_parcel']    = { sheet: 'projectiles', x: 0,   y: 0, w: 8,  h: 6 };  // approximate
-        a['proj_cannon']    = { sheet: 'projectiles', x: 8,   y: 0, w: 6,  h: 5 };  // approximate
-        a['proj_letter']    = { sheet: 'projectiles', x: 14,  y: 0, w: 5,  h: 3 };  // approximate
+        // Ninja stamp (4 rotation frames, middle area)
+        d('proj_stamp_0', 'projectiles', 0.02, 0.28, 0.12, 0.18, 10, 10, w, h);
+        d('proj_stamp_1', 'projectiles', 0.16, 0.28, 0.12, 0.18, 10, 10, w, h);
+        d('proj_stamp_2', 'projectiles', 0.30, 0.28, 0.12, 0.18, 10, 10, w, h);
+        d('proj_stamp_3', 'projectiles', 0.44, 0.28, 0.12, 0.18, 10, 10, w, h);
 
-        // Stamp projectile (4 rotation frames, 10x10)
-        a['proj_stamp_0']   = { sheet: 'projectiles', x: 20,  y: 0, w: 10, h: 10 }; // approximate
-        a['proj_stamp_1']   = { sheet: 'projectiles', x: 30,  y: 0, w: 10, h: 10 }; // approximate
-        a['proj_stamp_2']   = { sheet: 'projectiles', x: 40,  y: 0, w: 10, h: 10 }; // approximate
-        a['proj_stamp_3']   = { sheet: 'projectiles', x: 50,  y: 0, w: 10, h: 10 }; // approximate
+        // DELIVERED stamp mark
+        d('stamp_mark', 'projectiles', 0.58, 0.28, 0.18, 0.14, 14, 8, w, h);
 
-        // Enemy projectile
-        a['proj_card']      = { sheet: 'projectiles', x: 60,  y: 0, w: 8,  h: 6 };  // approximate
+        // Enemy card projectile
+        d('proj_card', 'projectiles', 0.80, 0.28, 0.10, 0.10, 8, 6, w, h);
 
-        // Stamp mark (left on ground)
-        a['stamp_mark']     = { sheet: 'projectiles', x: 68,  y: 0, w: 14, h: 8 };  // approximate
+        // Pickup boxes (bottom row)
+        d('pickup_cannon', 'projectiles', 0.00, 0.68, 0.14, 0.22, 12, 10, w, h);
+        d('pickup_spray',  'projectiles', 0.18, 0.68, 0.14, 0.22, 12, 10, w, h);
+        d('pickup_stamp',  'projectiles', 0.36, 0.68, 0.14, 0.22, 12, 10, w, h);
+        d('pickup_health', 'projectiles', 0.54, 0.68, 0.14, 0.22, 10, 10, w, h);
+        d('pickup_edv',    'projectiles', 0.72, 0.68, 0.16, 0.22, 14, 10, w, h);
+    },
 
-        // Pickups
-        a['pickup_cannon']  = { sheet: 'projectiles', x: 0,   y: 16, w: 12, h: 10 }; // approximate
-        a['pickup_spray']   = { sheet: 'projectiles', x: 12,  y: 16, w: 12, h: 10 }; // approximate
-        a['pickup_stamp']   = { sheet: 'projectiles', x: 24,  y: 16, w: 12, h: 10 }; // approximate
-        a['pickup_health']  = { sheet: 'projectiles', x: 36,  y: 16, w: 10, h: 10 }; // approximate
-        a['pickup_edv']     = { sheet: 'projectiles', x: 46,  y: 16, w: 14, h: 10 }; // approximate
+    // ================================================================
+    // BACKGROUNDS - 5 themes, each with ground tile + far + near parallax
+    // Layout: 6 panels (2 rows x 3 columns)
+    //   Top row: Suburban, Urban, Regional
+    //   Bottom row: Regional(alt), Coastal, Outback
+    // Each panel has: ground tile (left), far parallax (top-right), near parallax (bottom-right)
+    // ================================================================
+    _buildBackgroundsAtlas: function(w, h) {
+        var d = this._defPct.bind(this);
 
-        // ============================================================
-        // BACKGROUNDS - assets/backgrounds.png
-        // Expected layout: 5 theme columns, each containing tile types
-        // Theme IDs: 0=suburban, 1=urban, 2=regional, 3=outback, 4=coastal
-        // Each theme column is 48px wide (3 tile types side by side)
-        // Row 0 (y=0):   ground 16x16 per theme
-        // Row 1 (y=16):  dirt 16x16 per theme
-        // Row 2 (y=32):  road 16x16 per theme
-        // Row 3 (y=48):  platform 16x8 per theme
-        // Row 4 (y=64):  bg_house_far 32x24 per theme
-        // Row 5 (y=96):  bg_house_near 40x32 per theme
-        // Row 6 (y=128): bg_tree 20x32 per theme
-        // Row 7 (y=160): bg_fence 16x16 per theme
-        // ============================================================
+        // For backgrounds, we extract ground tiles from the small squares shown
+        // Theme 0 = Suburban (top-left panel)
+        d('ground_0', 'backgrounds', 0.00, 0.06, 0.06, 0.10, 16, 16, w, h);
+        d('dirt_0',   'backgrounds', 0.00, 0.06, 0.06, 0.10, 16, 16, w, h);
+        d('road_0',   'backgrounds', 0.00, 0.06, 0.06, 0.10, 16, 16, w, h);
+        d('platform_0','backgrounds', 0.00, 0.06, 0.06, 0.05, 16, 8, w, h);
 
-        var themeNames = [0, 1, 2, 3, 4]; // theme IDs
-        for (var t = 0; t < themeNames.length; t++) {
-            var themeId = themeNames[t];
-            var tx = t * 48; // approximate - each theme column ~48px wide
+        // Theme 1 = Urban (top-center panel)
+        d('ground_1', 'backgrounds', 0.34, 0.06, 0.06, 0.10, 16, 16, w, h);
+        d('dirt_1',   'backgrounds', 0.34, 0.06, 0.06, 0.10, 16, 16, w, h);
+        d('road_1',   'backgrounds', 0.34, 0.06, 0.06, 0.10, 16, 16, w, h);
+        d('platform_1','backgrounds', 0.34, 0.06, 0.06, 0.05, 16, 8, w, h);
 
-            // Ground tiles (16x16)
-            a['ground_' + themeId]         = { sheet: 'backgrounds', x: tx,      y: 0,   w: 16, h: 16 }; // approximate
-            a['dirt_' + themeId]           = { sheet: 'backgrounds', x: tx,      y: 16,  w: 16, h: 16 }; // approximate
-            a['road_' + themeId]           = { sheet: 'backgrounds', x: tx,      y: 32,  w: 16, h: 16 }; // approximate
-            a['platform_' + themeId]       = { sheet: 'backgrounds', x: tx,      y: 48,  w: 16, h: 8 };  // approximate
+        // Theme 2 = Regional (top-right panel)
+        d('ground_2', 'backgrounds', 0.68, 0.06, 0.06, 0.10, 16, 16, w, h);
+        d('dirt_2',   'backgrounds', 0.68, 0.06, 0.06, 0.10, 16, 16, w, h);
+        d('road_2',   'backgrounds', 0.68, 0.06, 0.06, 0.10, 16, 16, w, h);
+        d('platform_2','backgrounds', 0.68, 0.06, 0.06, 0.05, 16, 8, w, h);
 
-            // Background decorations per theme
-            a['bg_house_far_' + themeId]   = { sheet: 'backgrounds', x: tx,      y: 64,  w: 32, h: 24 }; // approximate
-            a['bg_house_near_' + themeId]  = { sheet: 'backgrounds', x: tx,      y: 96,  w: 40, h: 32 }; // approximate
-            a['bg_tree_' + themeId]        = { sheet: 'backgrounds', x: tx,      y: 128, w: 20, h: 32 }; // approximate
-            a['bg_fence_' + themeId]       = { sheet: 'backgrounds', x: tx,      y: 160, w: 16, h: 16 }; // approximate
+        // Theme 3 = Coastal (bottom-center panel)
+        d('ground_3', 'backgrounds', 0.34, 0.56, 0.06, 0.10, 16, 16, w, h);
+        d('dirt_3',   'backgrounds', 0.34, 0.56, 0.06, 0.10, 16, 16, w, h);
+        d('road_3',   'backgrounds', 0.34, 0.56, 0.06, 0.10, 16, 16, w, h);
+        d('platform_3','backgrounds', 0.34, 0.56, 0.06, 0.05, 16, 8, w, h);
+
+        // Theme 4 = Outback (bottom-right panel)
+        d('ground_4', 'backgrounds', 0.68, 0.56, 0.06, 0.10, 16, 16, w, h);
+        d('dirt_4',   'backgrounds', 0.68, 0.56, 0.06, 0.10, 16, 16, w, h);
+        d('road_4',   'backgrounds', 0.68, 0.56, 0.06, 0.10, 16, 16, w, h);
+        d('platform_4','backgrounds', 0.68, 0.56, 0.06, 0.05, 16, 8, w, h);
+
+        // Background houses/trees/fences - use near parallax panels as source
+        // These are wide strips, we'll sample chunks from them
+        for (var t = 0; t < 5; t++) {
+            // Use the programmatic fallback for these complex composites
+            // The parallax backgrounds don't tile-map well from the Gemini composites
+            // Just map ground tiles for now
+            d('bg_house_far_' + t,  'backgrounds', 0.06, 0.02 + (t < 3 ? 0 : 0.50), 0.26, 0.18, 32, 24, w, h);
+            d('bg_house_near_' + t, 'backgrounds', 0.06, 0.20 + (t < 3 ? 0 : 0.50), 0.26, 0.25, 40, 32, w, h);
+            d('bg_tree_' + t,       'backgrounds', 0.06, 0.20 + (t < 3 ? 0 : 0.50), 0.08, 0.25, 20, 32, w, h);
+            d('bg_fence_' + t,      'backgrounds', 0.20, 0.35 + (t < 3 ? 0 : 0.50), 0.10, 0.08, 16, 16, w, h);
         }
 
-        // Special trees and structures (not per-theme)
-        a['dead_tree']      = { sheet: 'backgrounds', x: 0,   y: 192, w: 16, h: 28 }; // approximate - outback dead tree
-        a['palm_tree']      = { sheet: 'backgrounds', x: 16,  y: 192, w: 20, h: 36 }; // approximate - coastal palm tree
-        a['building']       = { sheet: 'backgrounds', x: 36,  y: 192, w: 32, h: 48 }; // approximate - urban building
-        a['silo']           = { sheet: 'backgrounds', x: 68,  y: 192, w: 16, h: 40 }; // approximate - regional silo
+        // Special elements - use fallback (programmatic sprites work fine)
+        // dead_tree, palm_tree, building, silo, cloud, sun not mapped
+    },
 
-        // Sky elements
-        a['cloud']          = { sheet: 'backgrounds', x: 84,  y: 192, w: 32, h: 12 }; // approximate
-        a['sun']            = { sheet: 'backgrounds', x: 116, y: 192, w: 16, h: 16 }; // approximate
+    // ================================================================
+    // UI - Title logo, house, locker, HUD icons
+    // Layout: Title at top, house bottom-left, locker center, icons bottom-right
+    // ================================================================
+    _buildUiAtlas: function(w, h) {
+        var d = this._defPct.bind(this);
 
-        // ============================================================
-        // UI ELEMENTS - assets/ui.png
-        // Expected layout:
-        // Row 0: Delivery house 32x32, Delivery locker 24x32
-        // Row 1: Boss health bar bg 200x8
-        // ============================================================
+        // Delivery house (bottom-left area)
+        d('delivery_house',  'ui', 0.02, 0.30, 0.35, 0.50, 32, 32, w, h);
+        // Parcel locker (center area)
+        d('delivery_locker', 'ui', 0.40, 0.30, 0.25, 0.50, 24, 32, w, h);
+    },
 
-        a['delivery_house']  = { sheet: 'ui', x: 0,   y: 0,  w: 32, h: 32 }; // approximate
-        a['delivery_locker'] = { sheet: 'ui', x: 32,  y: 0,  w: 24, h: 32 }; // approximate
-        a['boss_bar_bg']     = { sheet: 'ui', x: 0,   y: 32, w: 200, h: 8 }; // approximate
+    // ================================================================
+    // EFFECTS - Explosions, dust, water, muzzle
+    // Layout: Explosion frames (top row), dust (mid), water (mid-low), muzzle (bottom)
+    // ================================================================
+    _buildEffectsAtlas: function(w, h) {
+        var d = this._defPct.bind(this);
 
-        // ============================================================
-        // EFFECTS - assets/effects.png
-        // Expected layout:
-        // Row 0: Explosion frames (5 frames at various sizes: 12,16,20,24,16)
-        // Row 1: Water drop 2x2
-        // ============================================================
+        // Explosion frames (top, 4 expanding + 1 smoke)
+        d('explosion_0', 'effects', 0.00, 0.00, 0.10, 0.18, 8,  8,  w, h);
+        d('explosion_1', 'effects', 0.14, 0.00, 0.16, 0.20, 16, 16, w, h);
+        d('explosion_2', 'effects', 0.32, 0.00, 0.18, 0.22, 20, 20, w, h);
+        d('explosion_3', 'effects', 0.52, 0.00, 0.22, 0.25, 28, 28, w, h);
 
-        // Explosion frames (5 sizes: 12, 16, 20, 24, 16)
-        a['explosion_0']    = { sheet: 'effects', x: 0,   y: 0,  w: 12, h: 12 }; // approximate
-        a['explosion_1']    = { sheet: 'effects', x: 12,  y: 0,  w: 16, h: 16 }; // approximate
-        a['explosion_2']    = { sheet: 'effects', x: 28,  y: 0,  w: 20, h: 20 }; // approximate
-        a['explosion_3']    = { sheet: 'effects', x: 48,  y: 0,  w: 24, h: 24 }; // approximate
-        a['explosion_4']    = { sheet: 'effects', x: 72,  y: 0,  w: 16, h: 16 }; // approximate
-
-        // Water drop
-        a['water_drop']     = { sheet: 'effects', x: 88,  y: 0,  w: 2,  h: 2 };  // approximate
+        // Water drop (tiny)
+        d('water_drop', 'effects', 0.00, 0.70, 0.04, 0.04, 2, 2, w, h);
     }
 };
