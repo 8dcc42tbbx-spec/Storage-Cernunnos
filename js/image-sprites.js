@@ -1,7 +1,7 @@
-// Postie Run - Image-Based Sprite Loading System (v2)
+// Postie Run - Image-Based Sprite Loading System (v3)
 // Loads PNG sprite sheets from assets/ and scales them to game resolution.
 // Falls back silently to PR.SpriteCache if images fail to load.
-// Gemini images are high-res (~1024px) so we crop + scale to game size.
+// Coordinates mapped from actual Gemini-generated sprite sheets.
 
 PR.ImageSprites = {
     loaded: false,
@@ -43,8 +43,6 @@ PR.ImageSprites = {
                 img.onload = function() {
                     self.sheets[name] = img;
                     self.loadedSheets++;
-                    console.log('[ImageSprites] Loaded ' + name + ' (' + img.width + 'x' + img.height + ')');
-                    // Build atlas AFTER image loads so we know dimensions
                     self._buildAtlasForSheet(name, img.width, img.height);
                     self._checkComplete();
                 };
@@ -63,12 +61,10 @@ PR.ImageSprites = {
         if (resolved >= this.totalSheets) {
             this.loading = false;
             this.loaded = true;
-            console.log('[ImageSprites] Done: ' + this.loadedSheets + ' loaded, ' + this.failedSheets + ' fallback.');
         }
     },
 
     // Draw sprite from atlas, scaling from source rect to game-size dest rect
-    // atlas entry: { sheet, sx, sy, sw, sh, dw, dh }
     draw: function(ctx, key, x, y, flipX) {
         if (!this.enabled) return false;
         var e = this.atlas[key];
@@ -78,16 +74,14 @@ PR.ImageSprites = {
 
         x = Math.round(x);
         y = Math.round(y);
-        var dw = e.dw;
-        var dh = e.dh;
 
         if (flipX) {
             ctx.save();
             ctx.scale(-1, 1);
-            ctx.drawImage(img, e.sx, e.sy, e.sw, e.sh, -x - dw, y, dw, dh);
+            ctx.drawImage(img, e.sx, e.sy, e.sw, e.sh, -x - e.dw, y, e.dw, e.dh);
             ctx.restore();
         } else {
-            ctx.drawImage(img, e.sx, e.sy, e.sw, e.sh, x, y, dw, dh);
+            ctx.drawImage(img, e.sx, e.sy, e.sw, e.sh, x, y, e.dw, e.dh);
         }
         return true;
     },
@@ -103,15 +97,12 @@ PR.ImageSprites = {
         };
     },
 
-    // Helper: define atlas entry with source rect and game-size dest
+    // Helper: define with absolute pixel coords
     _def: function(key, sheet, sx, sy, sw, sh, dw, dh) {
         this.atlas[key] = { sheet: sheet, sx: sx, sy: sy, sw: sw, sh: sh, dw: dw, dh: dh };
     },
 
-    // Helper: define atlas entry using percentage-based coordinates
-    // (px, py) = top-left as fraction of image size (0-1)
-    // (pw, ph) = size as fraction of image size (0-1)
-    // (dw, dh) = destination game-pixel size
+    // Helper: define with percentage-based coords (0-1 fractions of image size)
     _defPct: function(key, sheet, px, py, pw, ph, dw, dh, imgW, imgH) {
         this.atlas[key] = {
             sheet: sheet,
@@ -123,7 +114,6 @@ PR.ImageSprites = {
         };
     },
 
-    // Build atlas entries for a specific sheet once we know its dimensions
     _buildAtlasForSheet: function(sheetName, imgW, imgH) {
         switch (sheetName) {
             case 'player': this._buildPlayerAtlas(imgW, imgH); break;
@@ -137,241 +127,205 @@ PR.ImageSprites = {
     },
 
     // ================================================================
-    // PLAYER - Ernie sprite sheet
-    // Layout from Gemini: loose arrangement, roughly:
-    //   Row 1: 2 idle frames (top ~20% of image)
-    //   Row 2: 4 run frames (~20-40%)
-    //   Row 3: 2 jump/crouch frames (~40-55%)
-    //   Row 4: 2 shoot/throw frames (~55-70%)
-    //   Row 5: 1 hurt frame (~70-85%)
-    //   Row 6: 3 death frames (~85-100%)
-    // Each frame is roughly 1/5 to 1/4 of image width
+    // PLAYER (1696 x 2528) - Ernie the postie
+    // Row 1: 2 idle standing frames
+    // Row 2: 4 run cycle frames
+    // Row 3: 2 jump/fall frames
+    // Row 4: 2 shoot/throw frames (with visible envelope)
+    // Row 5: 1 hurt frame
+    // Row 6: 3 death frames (stumble, fall, lying)
     // ================================================================
     _buildPlayerAtlas: function(w, h) {
         var d = this._defPct.bind(this);
-        // Idle (2 frames, top row)
-        d('player_idle_0', 'player', 0.00, 0.00, 0.22, 0.20, 16, 24, w, h);
-        d('player_idle_1', 'player', 0.22, 0.00, 0.22, 0.20, 16, 24, w, h);
 
-        // Run (4 frames, second row)
-        d('player_run_0', 'player', 0.00, 0.20, 0.22, 0.20, 16, 24, w, h);
-        d('player_run_1', 'player', 0.22, 0.20, 0.22, 0.20, 16, 24, w, h);
-        d('player_run_2', 'player', 0.44, 0.20, 0.22, 0.20, 16, 24, w, h);
-        d('player_run_3', 'player', 0.66, 0.20, 0.22, 0.20, 16, 24, w, h);
+        // Row 1 - Idle (2 frames, top ~16%)
+        d('player_idle_0', 'player', 0.01, 0.00, 0.26, 0.16, 16, 24, w, h);
+        d('player_idle_1', 'player', 0.28, 0.00, 0.28, 0.16, 16, 24, w, h);
 
-        // Jump, Fall (third row)
-        d('player_jump', 'player', 0.00, 0.40, 0.22, 0.18, 16, 24, w, h);
-        d('player_fall', 'player', 0.22, 0.40, 0.22, 0.18, 16, 24, w, h);
+        // Row 2 - Run (4 frames, ~17-33%)
+        d('player_run_0', 'player', 0.00, 0.17, 0.23, 0.16, 16, 24, w, h);
+        d('player_run_1', 'player', 0.23, 0.17, 0.23, 0.16, 16, 24, w, h);
+        d('player_run_2', 'player', 0.47, 0.17, 0.23, 0.16, 16, 24, w, h);
+        d('player_run_3', 'player', 0.70, 0.17, 0.23, 0.16, 16, 24, w, h);
 
-        // Shoot, Crouch (fourth row)
-        d('player_shoot', 'player', 0.00, 0.55, 0.25, 0.18, 16, 24, w, h);
-        d('player_crouch', 'player', 0.30, 0.55, 0.25, 0.18, 16, 24, w, h);
+        // Row 3 - Jump/Fall (2 frames, ~34-50%)
+        d('player_jump', 'player', 0.00, 0.34, 0.27, 0.15, 16, 24, w, h);
+        d('player_fall', 'player', 0.30, 0.34, 0.27, 0.15, 16, 24, w, h);
 
-        // Hurt (fifth row)
-        d('player_hurt', 'player', 0.00, 0.72, 0.25, 0.15, 16, 24, w, h);
+        // Row 4 - Shoot/Throw (2 frames, ~52-68%)
+        d('player_shoot', 'player', 0.00, 0.52, 0.30, 0.16, 18, 24, w, h);
+        d('player_crouch','player', 0.34, 0.52, 0.34, 0.16, 18, 24, w, h);
 
-        // Death frames (bottom)
-        d('player_die_0', 'player', 0.00, 0.85, 0.25, 0.15, 16, 24, w, h);
-        d('player_die_1', 'player', 0.30, 0.85, 0.30, 0.15, 24, 12, w, h);
+        // Row 5 - Hurt (1 frame, ~70-83%)
+        d('player_hurt', 'player', 0.00, 0.70, 0.26, 0.13, 16, 24, w, h);
+
+        // Row 6 - Death (3 frames, ~84-100%)
+        d('player_die_0', 'player', 0.00, 0.84, 0.22, 0.15, 16, 24, w, h);
+        d('player_die_1', 'player', 0.24, 0.84, 0.32, 0.15, 20, 16, w, h);
+        d('player_die_2', 'player', 0.54, 0.86, 0.40, 0.14, 24, 12, w, h);
     },
 
     // ================================================================
-    // eDV - Two frames side by side
+    // eDV (3712 x 1152) - Australia Post delivery vehicle
+    // 2 frames side by side: empty and with Ernie driving
     // ================================================================
     _buildEdvAtlas: function(w, h) {
         var d = this._defPct.bind(this);
-        d('edv',        'edv', 0.00, 0.05, 0.48, 0.90, 32, 20, w, h);
-        d('edv_manned', 'edv', 0.50, 0.05, 0.48, 0.90, 32, 20, w, h);
+        d('edv',        'edv', 0.01, 0.04, 0.46, 0.92, 32, 20, w, h);
+        d('edv_manned', 'edv', 0.51, 0.04, 0.46, 0.92, 32, 20, w, h);
     },
 
     // ================================================================
-    // ENEMIES - Large composite with labeled sections
-    // Layout from Gemini (approximate regions):
-    //   Top-left: dogs, magpies (small sprites)
-    //   Top-right: Amazon van (large)
-    //   Mid-left: person, bin, mower, cat
-    //   Mid-right: emu, drop bear
-    //   Bottom-left: road train
-    //   Bottom-center: rottweiler boss
-    //   Bottom-right: chihuahua
+    // ENEMIES (2816 x 1536) - All enemy types with text labels
+    // Top: dogs(2), magpies(3), van(1)
+    // Mid: person(2), bin(1), mower(1), emu(2), dropbear(1)
+    // Lower: cat(2)
+    // Bottom: roadtrain(1), rottweiler(2), chihuahua(2)
     // ================================================================
     _buildEnemiesAtlas: function(w, h) {
         var d = this._defPct.bind(this);
 
-        // Dogs (top-left, 2 frames)
-        d('dog_0', 'enemies', 0.00, 0.00, 0.15, 0.12, 16, 12, w, h);
-        d('dog_1', 'enemies', 0.15, 0.00, 0.15, 0.12, 16, 12, w, h);
+        // Dogs - top-left (2 frames, with label "3A" above)
+        d('dog_0', 'enemies', 0.00, 0.03, 0.09, 0.12, 16, 12, w, h);
+        d('dog_1', 'enemies', 0.10, 0.03, 0.09, 0.12, 16, 12, w, h);
 
-        // Magpies (top, after dogs, 2 frames + swoop)
-        d('magpie_0',    'enemies', 0.32, 0.00, 0.10, 0.10, 16, 12, w, h);
-        d('magpie_1',    'enemies', 0.42, 0.00, 0.10, 0.10, 16, 12, w, h);
-        d('magpie_swoop','enemies', 0.52, 0.00, 0.10, 0.12, 16, 16, w, h);
+        // Magpies - top-center after dogs (label "3B")
+        // 2 flap frames + 1 swoop/dive frame
+        d('magpie_0',     'enemies', 0.22, 0.02, 0.065, 0.10, 16, 12, w, h);
+        d('magpie_1',     'enemies', 0.29, 0.02, 0.065, 0.10, 16, 12, w, h);
+        d('magpie_swoop', 'enemies', 0.37, 0.01, 0.08,  0.12, 16, 16, w, h);
 
-        // Seagulls - reuse magpie coordinates if no separate seagull in image
-        d('seagull_0', 'enemies', 0.32, 0.00, 0.10, 0.10, 16, 12, w, h);
-        d('seagull_1', 'enemies', 0.42, 0.00, 0.10, 0.10, 16, 12, w, h);
+        // Seagulls - reuse magpie frames (no separate seagull sprites)
+        d('seagull_0', 'enemies', 0.22, 0.02, 0.065, 0.10, 16, 12, w, h);
+        d('seagull_1', 'enemies', 0.29, 0.02, 0.065, 0.10, 16, 12, w, h);
 
-        // Van (top-right, large)
-        d('van', 'enemies', 0.68, 0.00, 0.30, 0.18, 48, 28, w, h);
+        // Van - top-right, large (label "3C")
+        d('van', 'enemies', 0.60, 0.01, 0.38, 0.32, 48, 28, w, h);
 
-        // Person (mid-left, 2 frames)
-        d('person_0', 'enemies', 0.00, 0.20, 0.12, 0.18, 16, 24, w, h);
-        d('person_1', 'enemies', 0.12, 0.20, 0.12, 0.18, 16, 24, w, h);
+        // Person - mid-left (label "3D", 2 angry frames)
+        d('person_0', 'enemies', 0.00, 0.23, 0.09, 0.20, 16, 24, w, h);
+        d('person_1', 'enemies', 0.10, 0.23, 0.09, 0.20, 16, 24, w, h);
 
-        // Bin (mid, small)
-        d('bin', 'enemies', 0.26, 0.22, 0.08, 0.14, 12, 16, w, h);
+        // Wheelie Bin - mid-center-left (label "3E")
+        d('bin', 'enemies', 0.225, 0.24, 0.06, 0.15, 12, 16, w, h);
 
-        // Sprinkler
-        d('sprinkler', 'enemies', 0.35, 0.25, 0.08, 0.08, 12, 8, w, h);
+        // Sprinkler - not in this sheet, falls through to programmatic
+        // (no sprinkler visible in the Gemini enemies sheet)
 
-        // Mower (mid)
-        d('mower', 'enemies', 0.42, 0.20, 0.14, 0.12, 20, 14, w, h);
+        // Lawn Mower - mid-center (label "3F")
+        d('mower', 'enemies', 0.31, 0.22, 0.14, 0.16, 20, 14, w, h);
 
-        // Cat (mid-right, 2 frames)
-        d('cat_0', 'enemies', 0.00, 0.42, 0.10, 0.12, 12, 14, w, h);
-        d('cat_1', 'enemies', 0.10, 0.42, 0.10, 0.12, 14, 14, w, h);
+        // Emu - mid-right (label "3H", 2 frames)
+        d('emu_0', 'enemies', 0.545, 0.20, 0.12, 0.24, 20, 24, w, h);
+        d('emu_1', 'enemies', 0.675, 0.20, 0.12, 0.24, 20, 24, w, h);
 
-        // Hose
-        d('hose', 'enemies', 0.22, 0.42, 0.06, 0.06, 8, 8, w, h);
+        // Drop Bear (koala) - far right (label "3I")
+        d('dropbear', 'enemies', 0.84, 0.22, 0.10, 0.16, 14, 14, w, h);
 
-        // Emu (mid-right, 2 frames)
-        d('emu_0', 'enemies', 0.60, 0.28, 0.14, 0.22, 20, 24, w, h);
-        d('emu_1', 'enemies', 0.74, 0.28, 0.14, 0.22, 20, 24, w, h);
+        // Cat on Fence - left side lower (label "3G", 2 frames)
+        d('cat_0', 'enemies', 0.00, 0.50, 0.08, 0.14, 12, 14, w, h);
+        d('cat_1', 'enemies', 0.10, 0.50, 0.10, 0.14, 14, 14, w, h);
 
-        // Drop bear
-        d('dropbear', 'enemies', 0.88, 0.28, 0.11, 0.14, 14, 14, w, h);
+        // Hose - not in this sheet, falls through to programmatic
 
-        // Road train (bottom-left, wide)
-        d('roadtrain', 'enemies', 0.00, 0.58, 0.50, 0.16, 64, 24, w, h);
+        // Road Train - bottom-left, very wide (label "3J")
+        d('roadtrain', 'enemies', 0.00, 0.64, 0.48, 0.18, 64, 24, w, h);
 
-        // Rottweiler boss (bottom-center, 2 frames, large)
-        d('rottweiler_0', 'enemies', 0.30, 0.65, 0.30, 0.25, 48, 40, w, h);
-        d('rottweiler_1', 'enemies', 0.60, 0.65, 0.30, 0.25, 48, 40, w, h);
+        // Rottweiler Boss - bottom-center, large (label "3K", 2 frames)
+        d('rottweiler_0', 'enemies', 0.34, 0.60, 0.22, 0.34, 48, 40, w, h);
+        d('rottweiler_1', 'enemies', 0.57, 0.60, 0.22, 0.34, 48, 40, w, h);
 
-        // Chihuahua (bottom-right, tiny, 2 frames)
-        d('chihuahua_0', 'enemies', 0.82, 0.88, 0.08, 0.08, 10, 8, w, h);
-        d('chihuahua_1', 'enemies', 0.90, 0.88, 0.08, 0.08, 10, 8, w, h);
+        // Chihuahua - bottom-right, small (label "3L", 2 frames)
+        d('chihuahua_0', 'enemies', 0.82, 0.82, 0.08, 0.14, 10, 8, w, h);
+        d('chihuahua_1', 'enemies', 0.91, 0.82, 0.08, 0.14, 10, 8, w, h);
     },
 
     // ================================================================
-    // PROJECTILES & PICKUPS
-    // Top section: projectiles (parcel, cannon, letter, stamps, card, stamp mark)
-    // Bottom section: pickup boxes
+    // PROJECTILES & PICKUPS (2816 x 1536)
+    // Top: parcel, cannon parcel, letter (with labels)
+    // Mid: 4 stamp rotations, DELIVERED stamp, Sorry Card
+    // Bottom: 5 pickup crates (Cannon, Spray, Stamp, Health, eDV)
     // ================================================================
     _buildProjectilesAtlas: function(w, h) {
         var d = this._defPct.bind(this);
 
-        // Parcel (top-left)
-        d('proj_parcel', 'projectiles', 0.00, 0.00, 0.10, 0.14, 8, 6, w, h);
-        // Cannon parcel
-        d('proj_cannon', 'projectiles', 0.12, 0.00, 0.10, 0.12, 6, 5, w, h);
-        // Letter
-        d('proj_letter', 'projectiles', 0.24, 0.00, 0.08, 0.08, 5, 3, w, h);
+        // Parcel - top-left (small brown box)
+        d('proj_parcel', 'projectiles', 0.02, 0.03, 0.07, 0.12, 8, 6, w, h);
+        // Cannon Parcel - with speed lines
+        d('proj_cannon', 'projectiles', 0.13, 0.03, 0.09, 0.12, 6, 5, w, h);
+        // Letter - small white envelope
+        d('proj_letter', 'projectiles', 0.27, 0.04, 0.06, 0.08, 5, 3, w, h);
 
-        // Ninja stamp (4 rotation frames, middle area)
-        d('proj_stamp_0', 'projectiles', 0.02, 0.28, 0.12, 0.18, 10, 10, w, h);
-        d('proj_stamp_1', 'projectiles', 0.16, 0.28, 0.12, 0.18, 10, 10, w, h);
-        d('proj_stamp_2', 'projectiles', 0.30, 0.28, 0.12, 0.18, 10, 10, w, h);
-        d('proj_stamp_3', 'projectiles', 0.44, 0.28, 0.12, 0.18, 10, 10, w, h);
+        // Ninja Stamps - 4 rotation frames (0°, 90°, 180°, 270°)
+        d('proj_stamp_0', 'projectiles', 0.01, 0.30, 0.10, 0.18, 10, 10, w, h);
+        d('proj_stamp_1', 'projectiles', 0.13, 0.30, 0.10, 0.18, 10, 10, w, h);
+        d('proj_stamp_2', 'projectiles', 0.25, 0.30, 0.10, 0.18, 10, 10, w, h);
+        d('proj_stamp_3', 'projectiles', 0.37, 0.30, 0.10, 0.18, 10, 10, w, h);
 
         // DELIVERED stamp mark
-        d('stamp_mark', 'projectiles', 0.58, 0.28, 0.18, 0.14, 14, 8, w, h);
+        d('stamp_mark', 'projectiles', 0.50, 0.30, 0.15, 0.14, 14, 8, w, h);
 
-        // Enemy card projectile
-        d('proj_card', 'projectiles', 0.80, 0.28, 0.10, 0.10, 8, 6, w, h);
+        // Sorry We Missed You card (enemy projectile)
+        d('proj_card', 'projectiles', 0.74, 0.32, 0.10, 0.12, 8, 6, w, h);
 
-        // Pickup boxes (bottom row)
-        d('pickup_cannon', 'projectiles', 0.00, 0.68, 0.14, 0.22, 12, 10, w, h);
-        d('pickup_spray',  'projectiles', 0.18, 0.68, 0.14, 0.22, 12, 10, w, h);
-        d('pickup_stamp',  'projectiles', 0.36, 0.68, 0.14, 0.22, 12, 10, w, h);
-        d('pickup_health', 'projectiles', 0.54, 0.68, 0.14, 0.22, 10, 10, w, h);
-        d('pickup_edv',    'projectiles', 0.72, 0.68, 0.16, 0.22, 14, 10, w, h);
+        // Pickup crates - bottom row (5 colored crates)
+        d('pickup_cannon', 'projectiles', 0.01, 0.66, 0.13, 0.28, 12, 12, w, h);
+        d('pickup_spray',  'projectiles', 0.17, 0.66, 0.13, 0.28, 12, 12, w, h);
+        d('pickup_stamp',  'projectiles', 0.33, 0.66, 0.13, 0.28, 12, 12, w, h);
+        d('pickup_health', 'projectiles', 0.50, 0.66, 0.13, 0.28, 12, 12, w, h);
+        d('pickup_edv',    'projectiles', 0.67, 0.66, 0.14, 0.28, 14, 12, w, h);
     },
 
     // ================================================================
-    // BACKGROUNDS - 5 themes, each with ground tile + far + near parallax
-    // Layout: 6 panels (2 rows x 3 columns)
-    //   Top row: Suburban, Urban, Regional
-    //   Bottom row: Regional(alt), Coastal, Outback
-    // Each panel has: ground tile (left), far parallax (top-right), near parallax (bottom-right)
+    // BACKGROUNDS (2816 x 1536) - 6 panels (2x3 grid)
+    // NOT mapping ground/dirt/platform tiles - programmatic tiles better
+    // NOT mapping individual house/tree/fence sprites - programmatic parallax works
+    // Backgrounds sheet is loaded but falls through to programmatic rendering
     // ================================================================
     _buildBackgroundsAtlas: function(w, h) {
-        var d = this._defPct.bind(this);
-
-        // For backgrounds, we extract ground tiles from the small squares shown
-        // Theme 0 = Suburban (top-left panel)
-        d('ground_0', 'backgrounds', 0.00, 0.06, 0.06, 0.10, 16, 16, w, h);
-        d('dirt_0',   'backgrounds', 0.00, 0.06, 0.06, 0.10, 16, 16, w, h);
-        d('road_0',   'backgrounds', 0.00, 0.06, 0.06, 0.10, 16, 16, w, h);
-        d('platform_0','backgrounds', 0.00, 0.06, 0.06, 0.05, 16, 8, w, h);
-
-        // Theme 1 = Urban (top-center panel)
-        d('ground_1', 'backgrounds', 0.34, 0.06, 0.06, 0.10, 16, 16, w, h);
-        d('dirt_1',   'backgrounds', 0.34, 0.06, 0.06, 0.10, 16, 16, w, h);
-        d('road_1',   'backgrounds', 0.34, 0.06, 0.06, 0.10, 16, 16, w, h);
-        d('platform_1','backgrounds', 0.34, 0.06, 0.06, 0.05, 16, 8, w, h);
-
-        // Theme 2 = Regional (top-right panel)
-        d('ground_2', 'backgrounds', 0.68, 0.06, 0.06, 0.10, 16, 16, w, h);
-        d('dirt_2',   'backgrounds', 0.68, 0.06, 0.06, 0.10, 16, 16, w, h);
-        d('road_2',   'backgrounds', 0.68, 0.06, 0.06, 0.10, 16, 16, w, h);
-        d('platform_2','backgrounds', 0.68, 0.06, 0.06, 0.05, 16, 8, w, h);
-
-        // Theme 3 = Coastal (bottom-center panel)
-        d('ground_3', 'backgrounds', 0.34, 0.56, 0.06, 0.10, 16, 16, w, h);
-        d('dirt_3',   'backgrounds', 0.34, 0.56, 0.06, 0.10, 16, 16, w, h);
-        d('road_3',   'backgrounds', 0.34, 0.56, 0.06, 0.10, 16, 16, w, h);
-        d('platform_3','backgrounds', 0.34, 0.56, 0.06, 0.05, 16, 8, w, h);
-
-        // Theme 4 = Outback (bottom-right panel)
-        d('ground_4', 'backgrounds', 0.68, 0.56, 0.06, 0.10, 16, 16, w, h);
-        d('dirt_4',   'backgrounds', 0.68, 0.56, 0.06, 0.10, 16, 16, w, h);
-        d('road_4',   'backgrounds', 0.68, 0.56, 0.06, 0.10, 16, 16, w, h);
-        d('platform_4','backgrounds', 0.68, 0.56, 0.06, 0.05, 16, 8, w, h);
-
-        // Background houses/trees/fences - use near parallax panels as source
-        // These are wide strips, we'll sample chunks from them
-        for (var t = 0; t < 5; t++) {
-            // Use the programmatic fallback for these complex composites
-            // The parallax backgrounds don't tile-map well from the Gemini composites
-            // Just map ground tiles for now
-            d('bg_house_far_' + t,  'backgrounds', 0.06, 0.02 + (t < 3 ? 0 : 0.50), 0.26, 0.18, 32, 24, w, h);
-            d('bg_house_near_' + t, 'backgrounds', 0.06, 0.20 + (t < 3 ? 0 : 0.50), 0.26, 0.25, 40, 32, w, h);
-            d('bg_tree_' + t,       'backgrounds', 0.06, 0.20 + (t < 3 ? 0 : 0.50), 0.08, 0.25, 20, 32, w, h);
-            d('bg_fence_' + t,      'backgrounds', 0.20, 0.35 + (t < 3 ? 0 : 0.50), 0.10, 0.08, 16, 16, w, h);
-        }
-
-        // Special elements - use fallback (programmatic sprites work fine)
-        // dead_tree, palm_tree, building, silo, cloud, sun not mapped
+        // Intentionally empty - all background sprites (ground tiles,
+        // parallax houses, trees, fences) fall through to the programmatic
+        // pixel art which tiles and repeats correctly.
+        // The Gemini background sheet has panoramic strips that don't
+        // work well as individual tiling sprites.
     },
 
     // ================================================================
-    // UI - Title logo, house, locker, HUD icons
-    // Layout: Title at top, house bottom-left, locker center, icons bottom-right
+    // UI (2816 x 1536) - Title, delivery targets, HUD icons
+    // Top: "POSTIE RUN" title logo (large, centered)
+    // Bottom-left: House (delivery target)
+    // Bottom-center: Parcel Locker (delivery target)
+    // Bottom-right: HUD icons (hat, heart, arrow)
     // ================================================================
     _buildUiAtlas: function(w, h) {
         var d = this._defPct.bind(this);
 
-        // Delivery house (bottom-left area)
-        d('delivery_house',  'ui', 0.02, 0.30, 0.35, 0.50, 32, 32, w, h);
-        // Parcel locker (center area)
-        d('delivery_locker', 'ui', 0.40, 0.30, 0.25, 0.50, 24, 32, w, h);
+        // Delivery House - bottom-left
+        d('delivery_house',  'ui', 0.04, 0.38, 0.28, 0.50, 32, 32, w, h);
+        // Parcel Locker - bottom-center
+        d('delivery_locker', 'ui', 0.38, 0.38, 0.18, 0.50, 24, 32, w, h);
     },
 
     // ================================================================
-    // EFFECTS - Explosions, dust, water, muzzle
-    // Layout: Explosion frames (top row), dust (mid), water (mid-low), muzzle (bottom)
+    // EFFECTS (2816 x 1536) - Explosions, dust, water, muzzle
+    // Row 1: 5 explosion frames (tiny→small→medium→large→smoke)
+    // Row 2: 3 dust puff frames
+    // Row 3: 3 water splash frames
+    // Row 4: 2 muzzle flash frames
     // ================================================================
     _buildEffectsAtlas: function(w, h) {
         var d = this._defPct.bind(this);
 
-        // Explosion frames (top, 4 expanding + 1 smoke)
-        d('explosion_0', 'effects', 0.00, 0.00, 0.10, 0.18, 8,  8,  w, h);
-        d('explosion_1', 'effects', 0.14, 0.00, 0.16, 0.20, 16, 16, w, h);
-        d('explosion_2', 'effects', 0.32, 0.00, 0.18, 0.22, 20, 20, w, h);
-        d('explosion_3', 'effects', 0.52, 0.00, 0.22, 0.25, 28, 28, w, h);
+        // Explosion frames - top row, expanding sizes
+        d('explosion_0', 'effects', 0.00, 0.02, 0.06, 0.13, 8,  8,  w, h);
+        d('explosion_1', 'effects', 0.08, 0.00, 0.12, 0.18, 14, 14, w, h);
+        d('explosion_2', 'effects', 0.22, 0.00, 0.14, 0.20, 20, 20, w, h);
+        d('explosion_3', 'effects', 0.38, 0.00, 0.18, 0.24, 26, 26, w, h);
 
-        // Water drop (tiny)
-        d('water_drop', 'effects', 0.00, 0.70, 0.04, 0.04, 2, 2, w, h);
+        // Smoke puff (5th frame in explosion row)
+        d('smoke', 'effects', 0.58, 0.00, 0.16, 0.22, 20, 20, w, h);
+
+        // Water drop (tiny, for sprinkler/hose effects)
+        d('water_drop', 'effects', 0.00, 0.52, 0.04, 0.06, 3, 3, w, h);
     }
 };
