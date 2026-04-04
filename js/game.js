@@ -5,7 +5,7 @@ PR.Game = {
     ctx: null,
     lastTime: 0,
     accumulator: 0,
-    TICK: 1000 / 60,
+    TICK: 1000 / 48,
     frameCount: 0,
 
     // === JUICE SYSTEMS ===

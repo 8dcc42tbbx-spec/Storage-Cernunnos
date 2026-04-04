@@ -93,8 +93,8 @@ PR.Menu = {
         ctx.fillRect(0, 160, 320, 80);
 
         // Title: Try Gemini logo first, fall back to bouncing text
-        var titleY = 25 + Math.sin(t * 0.04) * 3;
-        if (!PR.ImageSprites.draw(ctx, 'title_logo', 80, titleY, false)) {
+        var titleY = 20 + Math.sin(t * 0.04) * 3;
+        if (!PR.ImageSprites.draw(ctx, 'title_logo', 70, titleY, false)) {
             var titleText = 'POSTIE RUN';
             var titleX = 60;
             for (var c = 0; c < titleText.length; c++) {
