@@ -92,18 +92,18 @@ PR.Menu = {
         ctx.fillStyle = '#142E0A';
         ctx.fillRect(0, 160, 320, 80);
 
-        // Title: "POSTIE RUN" - each letter bounces individually
-        var titleText = 'POSTIE RUN';
-        var titleX = 60;
-        var baseY = 35;
-        for (var c = 0; c < titleText.length; c++) {
-            var letterY = baseY + Math.sin(t * 0.06 + c * 0.5) * 3;
-            // Color cycle per letter
-            var colors = ['#CC2200', '#FF4400', '#FF6600', '#FFD700', '#FFEE44'];
-            var lColor = colors[(c + Math.floor(t / 8)) % colors.length];
-            // Shadow
-            PR.Utils.drawText(ctx, titleText[c], titleX + c * 20 + 1, letterY + 2, '#000000', 3);
-            PR.Utils.drawText(ctx, titleText[c], titleX + c * 20, letterY, lColor, 3);
+        // Title: Try Gemini logo first, fall back to bouncing text
+        var titleY = 25 + Math.sin(t * 0.04) * 3;
+        if (!PR.ImageSprites.draw(ctx, 'title_logo', 80, titleY, false)) {
+            var titleText = 'POSTIE RUN';
+            var titleX = 60;
+            for (var c = 0; c < titleText.length; c++) {
+                var letterY = titleY + 10 + Math.sin(t * 0.06 + c * 0.5) * 3;
+                var colors = ['#CC2200', '#FF4400', '#FF6600', '#FFD700', '#FFEE44'];
+                var lColor = colors[(c + Math.floor(t / 8)) % colors.length];
+                PR.Utils.drawText(ctx, titleText[c], titleX + c * 20 + 1, letterY + 2, '#000000', 3);
+                PR.Utils.drawText(ctx, titleText[c], titleX + c * 20, letterY, lColor, 3);
+            }
         }
 
         // Subtitle with typewriter effect

@@ -226,65 +226,89 @@ PR.Level = {
         var camY = PR.Camera.y;
         var vw = PR.Camera.viewW;
         var vh = PR.Camera.viewH;
+        var thId = this.data.theme;
+        var groundY = this.data.groundY * PR.CONST.TILE_SIZE;
 
-        // Sky gradient (world space, covers full visible area)
+        // Sky gradient
         var skyGrad = ctx.createLinearGradient(0, 0, 0, 200);
         skyGrad.addColorStop(0, pal.sky);
         skyGrad.addColorStop(1, pal.skyBottom);
         ctx.fillStyle = skyGrad;
         ctx.fillRect(camX, camY, vw + 1, vh + 1);
 
-        // Sun (fixed relative to viewport)
+        // Sun
         var sunX = camX + vw * 0.85;
-        if (this.data.theme === PR.CONST.THEME_OUTBACK) {
-            PR.SpriteCache.draw(ctx, 'sun', sunX, camY + 8, false);
-        } else {
-            PR.SpriteCache.draw(ctx, 'sun', sunX, camY + 12, false);
-        }
+        PR.SpriteCache.draw(ctx, 'sun', sunX, camY + 10, false);
 
-        // Clouds (parallax, fixed to sky regardless of vertical scroll)
+        // Clouds
         var cloudOffset = PR.Camera.parallaxX(0.05);
         for (var c = 0; c < 8; c++) {
             var cx = camX + (c * 50 + 10) - (cloudOffset % (8 * 50));
             if (cx > camX - 40 && cx < camX + vw + 40) {
-                PR.SpriteCache.draw(ctx, 'cloud', cx, camY + 8 + (c % 3) * 8, false);
+                PR.SpriteCache.draw(ctx, 'cloud', cx, camY + 6 + (c % 3) * 8, false);
             }
         }
 
-        // Far background layer (parallax 0.2)
+        // Far parallax layer (0.2 scroll rate)
+        // Try Gemini parallax strip first, fall back to programmatic sprites
+        var farKey = 'parallax_far_' + thId;
+        var farEntry = PR.ImageSprites.atlas[farKey];
         var farOffset = PR.Camera.parallaxX(0.2);
-        var thId = this.data.theme;
-        var groundY = this.data.groundY * PR.CONST.TILE_SIZE;
-        for (var f = 0; f < 30; f++) {
-            var fsx = (f * 80) - farOffset;
-            if (fsx > -40 && fsx < vw + 40) {
-                var fwx = camX + fsx;
-                if (thId === PR.CONST.THEME_URBAN) {
-                    PR.SpriteCache.draw(ctx, 'building', fwx, groundY - 60, false);
-                } else if (thId === PR.CONST.THEME_REGIONAL && f % 4 === 0) {
-                    PR.SpriteCache.draw(ctx, 'silo', fwx, groundY - 50, false);
-                } else {
-                    PR.SpriteCache.draw(ctx, 'bg_house_far_' + thId, fwx, groundY - 30, false);
+
+        if (farEntry && PR.ImageSprites.sheets[farEntry.sheet]) {
+            // Draw repeating parallax strip from Gemini backgrounds
+            var stripW = farEntry.dw;
+            var stripH = farEntry.dh;
+            var scrollX = farOffset % stripW;
+            for (var fx = -scrollX - stripW; fx < vw + stripW; fx += stripW) {
+                PR.ImageSprites.draw(ctx, farKey, camX + fx, groundY - stripH, false);
+            }
+        } else {
+            // Programmatic fallback
+            for (var f = 0; f < 30; f++) {
+                var fsx = (f * 80) - farOffset;
+                if (fsx > -40 && fsx < vw + 40) {
+                    var fwx = camX + fsx;
+                    if (thId === PR.CONST.THEME_URBAN) {
+                        PR.SpriteCache.draw(ctx, 'building', fwx, groundY - 60, false);
+                    } else if (thId === PR.CONST.THEME_REGIONAL && f % 4 === 0) {
+                        PR.SpriteCache.draw(ctx, 'silo', fwx, groundY - 50, false);
+                    } else {
+                        PR.SpriteCache.draw(ctx, 'bg_house_far_' + thId, fwx, groundY - 24, false);
+                    }
                 }
             }
         }
 
-        // Near background layer (parallax 0.5)
+        // Near parallax layer (0.5 scroll rate)
+        var nearKey = 'parallax_near_' + thId;
+        var nearEntry = PR.ImageSprites.atlas[nearKey];
         var nearOffset = PR.Camera.parallaxX(0.5);
-        for (var n = 0; n < 40; n++) {
-            var nsx = (n * 60) - nearOffset;
-            if (nsx > -50 && nsx < vw + 50) {
-                var nwx = camX + nsx;
-                if (n % 3 === 0) {
-                    var treeKey;
-                    if (thId === PR.CONST.THEME_OUTBACK) treeKey = 'dead_tree';
-                    else if (thId === PR.CONST.THEME_COASTAL) treeKey = 'palm_tree';
-                    else treeKey = 'bg_tree_' + thId;
-                    PR.SpriteCache.draw(ctx, treeKey, nwx, groundY - 34, false);
-                } else if (n % 3 === 1) {
-                    PR.SpriteCache.draw(ctx, 'bg_house_near_' + thId, nwx, groundY - 36, false);
-                } else {
-                    PR.SpriteCache.draw(ctx, 'bg_fence_' + thId, nwx, groundY - 16, false);
+
+        if (nearEntry && PR.ImageSprites.sheets[nearEntry.sheet]) {
+            var nStripW = nearEntry.dw;
+            var nStripH = nearEntry.dh;
+            var nScrollX = nearOffset % nStripW;
+            for (var nx = -nScrollX - nStripW; nx < vw + nStripW; nx += nStripW) {
+                PR.ImageSprites.draw(ctx, nearKey, camX + nx, groundY - nStripH, false);
+            }
+        } else {
+            // Programmatic fallback - houses sit on ground
+            for (var n = 0; n < 40; n++) {
+                var nsx = (n * 60) - nearOffset;
+                if (nsx > -50 && nsx < vw + 50) {
+                    var nwx = camX + nsx;
+                    if (n % 3 === 0) {
+                        var treeKey;
+                        if (thId === PR.CONST.THEME_OUTBACK) treeKey = 'dead_tree';
+                        else if (thId === PR.CONST.THEME_COASTAL) treeKey = 'palm_tree';
+                        else treeKey = 'bg_tree_' + thId;
+                        PR.SpriteCache.draw(ctx, treeKey, nwx, groundY - 32, false);
+                    } else if (n % 3 === 1) {
+                        PR.SpriteCache.draw(ctx, 'bg_house_near_' + thId, nwx, groundY - 32, false);
+                    } else {
+                        PR.SpriteCache.draw(ctx, 'bg_fence_' + thId, nwx, groundY - 16, false);
+                    }
                 }
             }
         }
