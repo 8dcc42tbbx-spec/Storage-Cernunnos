@@ -1,6 +1,7 @@
-// Postie Run - Image-Based Sprite System (v6)
-// Loads Gemini PNG sprite sheets, cleans baked-in checkerboard patterns,
-// and maps regions to game sprite keys via monkey-patching PR.SpriteCache.draw.
+// Postie Run - Image-Based Sprite System (v7)
+// Loads Gemini PNG sprite sheets and maps regions to game sprite keys.
+// Cleans baked-in checkerboard patterns when possible (requires same-origin).
+// Falls back to raw images if cleaning fails (file:// CORS restrictions).
 
 PR.ImageSprites = {
     loaded: false,
@@ -13,13 +14,7 @@ PR.ImageSprites = {
     atlas: {},
     enabled: true,
     _patched: false,
-
-    // Sheets that need checkerboard removal (sprites on checker background)
-    // backgrounds.png has solid artwork strips and doesn't need cleaning
-    _needsCleaning: {
-        player: true, edv: true, enemies: true,
-        projectiles: true, ui: true, effects: true
-    },
+    _cleaningSupported: null, // null = untested, true/false after first attempt
 
     sheetDefs: {
         player:       'assets/player.png',
@@ -29,6 +24,12 @@ PR.ImageSprites = {
         backgrounds:  'assets/backgrounds.png',
         ui:           'assets/ui.png',
         effects:      'assets/effects.png'
+    },
+
+    // Sheets that need checkerboard removal
+    _needsCleaning: {
+        player: true, edv: true, enemies: true,
+        projectiles: true, ui: true, effects: true
     },
 
     init: function() {
@@ -47,8 +48,18 @@ PR.ImageSprites = {
             (function(name) {
                 var img = new Image();
                 img.onload = function() {
-                    if (self._needsCleaning[name]) {
-                        self.sheets[name] = self._cleanCheckerboard(img);
+                    // Try to clean checkerboard if needed and supported
+                    if (self._needsCleaning[name] && self._cleaningSupported !== false) {
+                        try {
+                            var cleaned = self._cleanCheckerboard(img);
+                            self.sheets[name] = cleaned;
+                            self._cleaningSupported = true;
+                        } catch(e) {
+                            // getImageData fails on file:// (CORS SecurityError)
+                            // Fall back to raw image for all future sheets too
+                            self._cleaningSupported = false;
+                            self.sheets[name] = img;
+                        }
                     } else {
                         self.sheets[name] = img;
                     }
@@ -65,9 +76,8 @@ PR.ImageSprites = {
         }
     },
 
-    // Remove baked-in checkerboard pattern from AI-generated sprite PNGs.
-    // These have alternating grey (~200) and white (~250) pixels as actual
-    // opaque pixel data instead of real alpha transparency.
+    // Remove baked-in checkerboard from AI-generated sprite PNGs.
+    // Checkerboard pixels alternate grey (~190-220) and white (~240-255).
     _cleanCheckerboard: function(img) {
         var c = document.createElement('canvas');
         c.width = img.width;
@@ -75,6 +85,7 @@ PR.ImageSprites = {
         var ctx = c.getContext('2d');
         ctx.drawImage(img, 0, 0);
 
+        // This line throws SecurityError on file:// origins
         var id = ctx.getImageData(0, 0, c.width, c.height);
         var d = id.data;
         var w = c.width;
@@ -83,70 +94,31 @@ PR.ImageSprites = {
         for (var y = 0; y < h; y++) {
             for (var x = 0; x < w; x++) {
                 var i = (y * w + x) * 4;
-                if (d[i + 3] < 10) continue; // already transparent
+                if (d[i + 3] < 10) continue;
 
                 var r = d[i], g = d[i + 1], b = d[i + 2];
-                // Must be near-greyscale
                 if (Math.abs(r - g) > 15 || Math.abs(g - b) > 15) continue;
 
                 var avg = (r + g + b) / 3;
-                // Checkerboard colors: light grey (~190-220) and white (~240-255)
-                if (avg < 180 || (avg > 225 && avg < 238)) continue;
-
                 var isGrey = (avg >= 180 && avg <= 225);
                 var isWhite = (avg >= 238);
                 if (!isGrey && !isWhite) continue;
 
-                // Check if this pixel is part of a checker pattern
-                // Look at cardinal neighbors for alternating grey/white
+                // Check cardinal neighbors for alternating checker pattern
                 var alts = 0;
-                var checked = 0;
-                if (x > 0) {
-                    var li = i - 4;
-                    if (d[li + 3] >= 10) {
-                        var la = (d[li] + d[li+1] + d[li+2]) / 3;
-                        if (Math.abs(d[li]-d[li+1]) < 15 && Math.abs(d[li+1]-d[li+2]) < 15) {
-                            checked++;
-                            if (isGrey && la >= 238) alts++;
-                            else if (isWhite && la >= 180 && la <= 225) alts++;
-                        }
-                    }
-                }
-                if (x < w - 1) {
-                    var ri = i + 4;
-                    if (d[ri + 3] >= 10) {
-                        var ra = (d[ri] + d[ri+1] + d[ri+2]) / 3;
-                        if (Math.abs(d[ri]-d[ri+1]) < 15 && Math.abs(d[ri+1]-d[ri+2]) < 15) {
-                            checked++;
-                            if (isGrey && ra >= 238) alts++;
-                            else if (isWhite && ra >= 180 && ra <= 225) alts++;
-                        }
-                    }
-                }
-                if (y > 0) {
-                    var ti = i - w * 4;
-                    if (d[ti + 3] >= 10) {
-                        var ta = (d[ti] + d[ti+1] + d[ti+2]) / 3;
-                        if (Math.abs(d[ti]-d[ti+1]) < 15 && Math.abs(d[ti+1]-d[ti+2]) < 15) {
-                            checked++;
-                            if (isGrey && ta >= 238) alts++;
-                            else if (isWhite && ta >= 180 && ta <= 225) alts++;
-                        }
-                    }
-                }
-                if (y < h - 1) {
-                    var bi = i + w * 4;
-                    if (d[bi + 3] >= 10) {
-                        var ba = (d[bi] + d[bi+1] + d[bi+2]) / 3;
-                        if (Math.abs(d[bi]-d[bi+1]) < 15 && Math.abs(d[bi+1]-d[bi+2]) < 15) {
-                            checked++;
-                            if (isGrey && ba >= 238) alts++;
-                            else if (isWhite && ba >= 180 && ba <= 225) alts++;
-                        }
-                    }
+                var dirs = [-4, 4, -w * 4, w * 4];
+                var bounds = [x > 0, x < w - 1, y > 0, y < h - 1];
+                for (var n = 0; n < 4; n++) {
+                    if (!bounds[n]) continue;
+                    var ni = i + dirs[n];
+                    if (d[ni + 3] < 10) continue;
+                    var nr = d[ni], ng = d[ni+1], nb = d[ni+2];
+                    if (Math.abs(nr - ng) > 15 || Math.abs(ng - nb) > 15) continue;
+                    var na = (nr + ng + nb) / 3;
+                    if (isGrey && na >= 238) alts++;
+                    else if (isWhite && na >= 180 && na <= 225) alts++;
                 }
 
-                // If 2+ neighbors alternate, this is a checker pixel - make transparent
                 if (alts >= 2) {
                     d[i + 3] = 0;
                 }
@@ -226,8 +198,6 @@ PR.ImageSprites = {
     },
 
     // PLAYER (1696 x 2528)
-    // Row 1: idle (2), Row 2: run (4), Row 3: jump/fall (2)
-    // Row 4: shoot/crouch (2), Row 5: hurt (1), Row 6: death (2)
     _buildPlayerAtlas: function(w, h) {
         var d = this._defPct.bind(this);
         d('player_idle_0', 'player', 0.01, 0.00, 0.24, 0.16, 16, 24, w, h);
@@ -245,7 +215,7 @@ PR.ImageSprites = {
         d('player_die_1',  'player', 0.26, 0.86, 0.35, 0.13, 24, 16, w, h);
     },
 
-    // EDV (3712 x 1152) - Left: empty, Right: with driver
+    // EDV (3712 x 1152)
     _buildEdvAtlas: function(w, h) {
         var d = this._defPct.bind(this);
         d('edv',        'edv', 0.01, 0.03, 0.46, 0.94, 32, 20, w, h);
@@ -298,51 +268,33 @@ PR.ImageSprites = {
         d('pickup_edv',    'projectiles', 0.67, 0.65, 0.15, 0.30, 14, 12, w, h);
     },
 
-    // BACKGROUNDS (2816 x 1536)
-    // 2x3 grid of theme panels. Each panel has artwork strips.
-    // ONLY parallax strips are used - ground/dirt tiles use programmatic sprites
-    // because the sheet has baked-in checker around the small tile swatches.
-    //
-    // Panel layout (each ~939x768 px):
-    //   Top area: Title + ground tile swatch
-    //   Middle: Far parallax artwork strip (sky + distant buildings)
-    //   Label text: "Far Parallax..." / "Near Parallax..."
-    //   Bottom: Near parallax artwork strip (houses/buildings)
-    //
-    // CRITICAL: Coordinates must precisely target artwork, avoiding label text.
+    // BACKGROUNDS (2816 x 1536) - parallax strips only, no ground tiles
     _buildBackgroundsAtlas: function(w, h) {
         var d = this._defPct.bind(this);
 
         var panels = [
-            { theme: 0, px: 0.000, py: 0.000 }, // Suburban top-left
-            { theme: 1, px: 0.333, py: 0.000 }, // Urban top-center
-            { theme: 2, px: 0.667, py: 0.000 }, // Regional top-right
-            { theme: 3, px: 0.333, py: 0.500 }, // Coastal bottom-center
-            { theme: 4, px: 0.667, py: 0.500 }  // Outback bottom-right
+            { theme: 0, px: 0.000, py: 0.000 },
+            { theme: 1, px: 0.333, py: 0.000 },
+            { theme: 2, px: 0.667, py: 0.000 },
+            { theme: 3, px: 0.333, py: 0.500 },
+            { theme: 4, px: 0.667, py: 0.500 }
         ];
 
         for (var i = 0; i < panels.length; i++) {
             var p = panels[i];
             var t = p.theme;
 
-            // Far parallax strip - the sky/cityscape artwork
-            // Positioned below the title and ground tile swatch area
-            // Starts at ~10% within panel, ~10% tall
+            // Far parallax strip - sky/cityscape artwork
             d('parallax_far_' + t, 'backgrounds',
                 p.px + 0.04, p.py + 0.08, 0.28, 0.09, 200, 48, w, h);
 
-            // Near parallax strip - the houses/buildings artwork
-            // Positioned below the "Near Parallax" label text
-            // Starts at ~35% within panel, ~13% tall
+            // Near parallax strip - houses/buildings artwork
             d('parallax_near_' + t, 'backgrounds',
                 p.px + 0.005, p.py + 0.34, 0.32, 0.13, 240, 72, w, h);
         }
-        // Note: ground_*, dirt_*, platform_* are NOT defined here.
-        // They fall through to programmatic sprites from sprites-env.js
-        // which are solid colored tiles without checker artifacts.
     },
 
-    // UI (2816 x 1536) - Title logo, delivery targets, HUD icons
+    // UI (2816 x 1536)
     _buildUiAtlas: function(w, h) {
         var d = this._defPct.bind(this);
         d('title_logo',     'ui', 0.14, 0.00, 0.72, 0.25, 180, 50, w, h);
