@@ -263,7 +263,7 @@ PR.Enemy.prototype.getBounds = function() {
 PR.Enemy.CONFIGS = {
     // ANGRY DOG - lunges and barks
     dog: {
-        w: 14, h: 10, health: 2, score: 200, speed: 2.5,
+        w: 14, h: 10, health: 2, score: 200, speed: 1.75,
         dropChance: 0.15, contactDamage: 1, canBeStomped: true,
         init: function() {
             this.aiState = 'chase';
@@ -299,7 +299,7 @@ PR.Enemy.CONFIGS = {
 
     // SWOOPING MAGPIE
     magpie: {
-        w: 14, h: 10, health: 2, score: 300, speed: 1.5,
+        w: 14, h: 10, health: 2, score: 300, speed: 1.05,
         dropChance: 0.1, contactDamage: 1, flying: true,
         init: function() {
             this.baseY = this.y;
@@ -338,7 +338,7 @@ PR.Enemy.CONFIGS = {
 
     // SEAGULL (coastal reskin of magpie)
     seagull: {
-        w: 14, h: 10, health: 2, score: 300, speed: 1.3,
+        w: 14, h: 10, health: 2, score: 300, speed: 0.91,
         dropChance: 0.1, contactDamage: 1, flying: true,
         init: function() {
             this.baseY = this.y;
@@ -358,7 +358,7 @@ PR.Enemy.CONFIGS = {
 
     // AMAZON VAN
     van: {
-        w: 44, h: 22, health: 5, score: 500, speed: 2.8,
+        w: 44, h: 22, health: 5, score: 500, speed: 1.96,
         dropChance: 0.4, contactDamage: 2,
         init: function(params) {
             this.fromRight = params.fromRight !== false;
@@ -460,7 +460,7 @@ PR.Enemy.CONFIGS = {
 
     // LAWN MOWER
     mower: {
-        w: 18, h: 12, health: 3, score: 350, speed: 0.8,
+        w: 18, h: 12, health: 3, score: 350, speed: 0.56,
         dropChance: 0.2, contactDamage: 2,
         init: function() {
             this.startX = this.x;
@@ -533,7 +533,7 @@ PR.Enemy.CONFIGS = {
 
     // EMU
     emu: {
-        w: 16, h: 22, health: 4, score: 400, speed: 2.2,
+        w: 16, h: 22, health: 4, score: 400, speed: 1.54,
         dropChance: 0.2, contactDamage: 2,
         init: function() { this.aiState = 'chase'; },
         update: function() {
@@ -579,7 +579,7 @@ PR.Enemy.CONFIGS = {
 
     // ROAD TRAIN
     roadtrain: {
-        w: 60, h: 20, health: 10, score: 1000, speed: 3.5,
+        w: 60, h: 20, health: 10, score: 1000, speed: 2.45,
         dropChance: 0.5, contactDamage: 3,
         init: function() {
             this.x = PR.Camera.x + PR.Camera.viewW + 30;
@@ -602,7 +602,7 @@ PR.Enemy.CONFIGS = {
 
     // BOSS: GIANT ROTTWEILER - 3 Phase Fight
     rottweiler: {
-        w: 44, h: 36, health: 50, score: 5000, speed: 1.5,
+        w: 44, h: 36, health: 50, score: 5000, speed: 1.05,
         dropChance: 0, contactDamage: 3, isBoss: true,
         init: function() {
             this.aiState = 'idle';
@@ -618,14 +618,14 @@ PR.Enemy.CONFIGS = {
             var hpPct = this.health / this.maxHealth;
             if (this.phase === 1 && hpPct <= 0.5) {
                 this.phase = 2;
-                this.speed = 2.2;
+                this.speed = 1.54;
                 this.maxSummons = 5;
                 PR.Camera.shake(8, 25);
                 if (PR.Game) { PR.Game.flash('#FF0000', 0.4); PR.Game.hitstop(8); }
                 PR.Audio.play('dog_bark');
             } else if (this.phase === 2 && hpPct <= 0.25) {
                 this.phase = 3;
-                this.speed = 3;
+                this.speed = 2.1;
                 this.maxSummons = 6;
                 this.contactDamage = 4;
                 PR.Camera.shake(10, 30);
@@ -637,9 +637,9 @@ PR.Enemy.CONFIGS = {
             if (this.phase >= 2) {
                 this.enrageTimer++;
                 if (this.enrageTimer % 300 < 60) {
-                    this.speed = this.phase === 3 ? 4 : 3;
+                    this.speed = this.phase === 3 ? 2.8 : 2.1;
                 } else {
-                    this.speed = this.phase === 3 ? 3 : 2.2;
+                    this.speed = this.phase === 3 ? 2.1 : 1.54;
                 }
             }
 
@@ -782,7 +782,7 @@ PR.Enemy.CONFIGS = {
 
     // CHIHUAHUA (boss summon)
     chihuahua: {
-        w: 8, h: 6, health: 1, score: 100, speed: 2.8,
+        w: 8, h: 6, health: 1, score: 100, speed: 1.96,
         dropChance: 0.05, contactDamage: 1, canBeStomped: true,
         init: function() {},
         update: function() {
