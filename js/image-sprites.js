@@ -1,7 +1,6 @@
-// Postie Run - Image-Based Sprite System (v7)
-// Loads Gemini PNG sprite sheets and maps regions to game sprite keys.
-// Cleans baked-in checkerboard patterns when possible (requires same-origin).
-// Falls back to raw images if cleaning fails (file:// CORS restrictions).
+// Postie Run - Image-Based Sprite System (v8)
+// Loads Gemini PNG sprite sheets with transparent backgrounds
+// and maps regions to game sprite keys via monkey-patching PR.SpriteCache.draw.
 
 PR.ImageSprites = {
     loaded: false,
@@ -14,7 +13,6 @@ PR.ImageSprites = {
     atlas: {},
     enabled: true,
     _patched: false,
-    _cleaningSupported: null, // null = untested, true/false after first attempt
 
     sheetDefs: {
         player:       'assets/player.png',
@@ -24,12 +22,6 @@ PR.ImageSprites = {
         backgrounds:  'assets/backgrounds.png',
         ui:           'assets/ui.png',
         effects:      'assets/effects.png'
-    },
-
-    // Sheets that need checkerboard removal
-    _needsCleaning: {
-        player: true, edv: true, enemies: true,
-        projectiles: true, ui: true, effects: true
     },
 
     init: function() {
@@ -48,21 +40,7 @@ PR.ImageSprites = {
             (function(name) {
                 var img = new Image();
                 img.onload = function() {
-                    // Try to clean checkerboard if needed and supported
-                    if (self._needsCleaning[name] && self._cleaningSupported !== false) {
-                        try {
-                            var cleaned = self._cleanCheckerboard(img);
-                            self.sheets[name] = cleaned;
-                            self._cleaningSupported = true;
-                        } catch(e) {
-                            // getImageData fails on file:// (CORS SecurityError)
-                            // Fall back to raw image for all future sheets too
-                            self._cleaningSupported = false;
-                            self.sheets[name] = img;
-                        }
-                    } else {
-                        self.sheets[name] = img;
-                    }
+                    self.sheets[name] = img;
                     self.loadedSheets++;
                     self._buildAtlasForSheet(name, img.width, img.height);
                     self._checkComplete();
@@ -74,59 +52,6 @@ PR.ImageSprites = {
                 img.src = self.sheetDefs[name];
             })(names[i]);
         }
-    },
-
-    // Remove baked-in checkerboard from AI-generated sprite PNGs.
-    // Checkerboard pixels alternate grey (~190-220) and white (~240-255).
-    _cleanCheckerboard: function(img) {
-        var c = document.createElement('canvas');
-        c.width = img.width;
-        c.height = img.height;
-        var ctx = c.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-
-        // This line throws SecurityError on file:// origins
-        var id = ctx.getImageData(0, 0, c.width, c.height);
-        var d = id.data;
-        var w = c.width;
-        var h = c.height;
-
-        for (var y = 0; y < h; y++) {
-            for (var x = 0; x < w; x++) {
-                var i = (y * w + x) * 4;
-                if (d[i + 3] < 10) continue;
-
-                var r = d[i], g = d[i + 1], b = d[i + 2];
-                if (Math.abs(r - g) > 15 || Math.abs(g - b) > 15) continue;
-
-                var avg = (r + g + b) / 3;
-                var isGrey = (avg >= 180 && avg <= 225);
-                var isWhite = (avg >= 238);
-                if (!isGrey && !isWhite) continue;
-
-                // Check cardinal neighbors for alternating checker pattern
-                var alts = 0;
-                var dirs = [-4, 4, -w * 4, w * 4];
-                var bounds = [x > 0, x < w - 1, y > 0, y < h - 1];
-                for (var n = 0; n < 4; n++) {
-                    if (!bounds[n]) continue;
-                    var ni = i + dirs[n];
-                    if (d[ni + 3] < 10) continue;
-                    var nr = d[ni], ng = d[ni+1], nb = d[ni+2];
-                    if (Math.abs(nr - ng) > 15 || Math.abs(ng - nb) > 15) continue;
-                    var na = (nr + ng + nb) / 3;
-                    if (isGrey && na >= 238) alts++;
-                    else if (isWhite && na >= 180 && na <= 225) alts++;
-                }
-
-                if (alts >= 2) {
-                    d[i + 3] = 0;
-                }
-            }
-        }
-
-        ctx.putImageData(id, 0, 0);
-        return c;
     },
 
     _checkComplete: function() {
@@ -268,29 +193,32 @@ PR.ImageSprites = {
         d('pickup_edv',    'projectiles', 0.67, 0.65, 0.15, 0.30, 14, 12, w, h);
     },
 
-    // BACKGROUNDS (2816 x 1536) - parallax strips only, no ground tiles
+    // BACKGROUNDS (2816 x 1536)
+    // Clean 2x3 grid - no title bars or label text in new version.
+    // Each panel: far parallax strip (top ~40%), near parallax strip (bottom ~50%)
+    // Ground tiles use programmatic sprites (no atlas entries here).
     _buildBackgroundsAtlas: function(w, h) {
         var d = this._defPct.bind(this);
 
         var panels = [
-            { theme: 0, px: 0.000, py: 0.000 },
-            { theme: 1, px: 0.333, py: 0.000 },
-            { theme: 2, px: 0.667, py: 0.000 },
-            { theme: 3, px: 0.333, py: 0.500 },
-            { theme: 4, px: 0.667, py: 0.500 }
+            { theme: 0, px: 0.000, py: 0.000 }, // Suburban top-left
+            { theme: 1, px: 0.333, py: 0.000 }, // Urban top-center
+            { theme: 2, px: 0.667, py: 0.000 }, // Regional top-right
+            { theme: 3, px: 0.333, py: 0.500 }, // Coastal bottom-center
+            { theme: 4, px: 0.667, py: 0.500 }  // Outback bottom-right
         ];
 
         for (var i = 0; i < panels.length; i++) {
             var p = panels[i];
             var t = p.theme;
 
-            // Far parallax strip - sky/cityscape artwork
+            // Far parallax strip - sky/cityscape panorama (top portion of panel)
             d('parallax_far_' + t, 'backgrounds',
-                p.px + 0.04, p.py + 0.08, 0.28, 0.09, 200, 48, w, h);
+                p.px + 0.04, p.py + 0.02, 0.28, 0.19, 200, 56, w, h);
 
-            // Near parallax strip - houses/buildings artwork
+            // Near parallax strip - houses/buildings panorama (bottom portion of panel)
             d('parallax_near_' + t, 'backgrounds',
-                p.px + 0.005, p.py + 0.34, 0.32, 0.13, 240, 72, w, h);
+                p.px + 0.005, p.py + 0.25, 0.325, 0.22, 240, 80, w, h);
         }
     },
 
