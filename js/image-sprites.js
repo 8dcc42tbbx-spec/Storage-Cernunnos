@@ -1,4 +1,4 @@
-// Postie Run - Image-Based Sprite System (v9)
+// Postie Run - Image-Based Sprite System (v10)
 // Loads Gemini PNG sprite sheets with transparent backgrounds
 // and maps regions to game sprite keys via monkey-patching PR.SpriteCache.draw.
 
@@ -118,22 +118,28 @@ PR.ImageSprites = {
     },
 
     // PLAYER (1696 x 2528)
-    // Generous source rects to avoid clipping sprites
+    // Each row's sprites are non-overlapping: px[n]+pw[n] < px[n+1]
     _buildPlayerAtlas: function(w, h) {
         var d = this._defPct.bind(this);
-        d('player_idle_0', 'player', 0.00, 0.00, 0.27, 0.17, 16, 24, w, h);
-        d('player_idle_1', 'player', 0.26, 0.00, 0.30, 0.17, 16, 24, w, h);
-        d('player_run_0',  'player', 0.00, 0.17, 0.23, 0.16, 16, 24, w, h);
-        d('player_run_1',  'player', 0.22, 0.17, 0.23, 0.16, 16, 24, w, h);
-        d('player_run_2',  'player', 0.44, 0.17, 0.23, 0.16, 16, 24, w, h);
-        d('player_run_3',  'player', 0.67, 0.17, 0.23, 0.16, 16, 24, w, h);
-        d('player_jump',   'player', 0.00, 0.33, 0.28, 0.16, 16, 24, w, h);
-        d('player_fall',   'player', 0.28, 0.33, 0.28, 0.16, 16, 24, w, h);
-        d('player_shoot',  'player', 0.00, 0.50, 0.32, 0.16, 20, 24, w, h);
-        d('player_crouch', 'player', 0.32, 0.50, 0.32, 0.16, 20, 24, w, h);
-        d('player_hurt',   'player', 0.00, 0.67, 0.28, 0.15, 16, 24, w, h);
-        d('player_die_0',  'player', 0.00, 0.82, 0.25, 0.16, 16, 24, w, h);
-        d('player_die_1',  'player', 0.24, 0.84, 0.40, 0.15, 26, 16, w, h);
+        // Row 1: Idle (2 sprites, each in ~50% of width)
+        d('player_idle_0', 'player', 0.01, 0.00, 0.21, 0.15, 16, 24, w, h);
+        d('player_idle_1', 'player', 0.30, 0.00, 0.21, 0.15, 16, 24, w, h);
+        // Row 2: Run (4 sprites, each in ~25% of width)
+        d('player_run_0',  'player', 0.01, 0.17, 0.18, 0.14, 16, 24, w, h);
+        d('player_run_1',  'player', 0.25, 0.17, 0.18, 0.14, 16, 24, w, h);
+        d('player_run_2',  'player', 0.49, 0.17, 0.18, 0.14, 16, 24, w, h);
+        d('player_run_3',  'player', 0.73, 0.17, 0.18, 0.14, 16, 24, w, h);
+        // Row 3: Jump, Fall (2 sprites)
+        d('player_jump',   'player', 0.00, 0.33, 0.24, 0.15, 16, 24, w, h);
+        d('player_fall',   'player', 0.32, 0.33, 0.24, 0.15, 16, 24, w, h);
+        // Row 4: Shoot, Crouch (2 sprites)
+        d('player_shoot',  'player', 0.00, 0.50, 0.28, 0.15, 20, 24, w, h);
+        d('player_crouch', 'player', 0.35, 0.50, 0.28, 0.15, 20, 24, w, h);
+        // Row 5: Hurt
+        d('player_hurt',   'player', 0.00, 0.67, 0.24, 0.14, 16, 24, w, h);
+        // Row 6: Die (2 sprites)
+        d('player_die_0',  'player', 0.00, 0.82, 0.22, 0.15, 16, 24, w, h);
+        d('player_die_1',  'player', 0.28, 0.84, 0.35, 0.14, 26, 16, w, h);
     },
 
     // EDV (3712 x 1152)
@@ -144,36 +150,36 @@ PR.ImageSprites = {
     },
 
     // ENEMIES (2816 x 1536)
-    // Generous source rects to capture full sprites including legs/tails
+    // Non-overlapping source rects: px[n]+pw[n] < px[n+1] for adjacent frames
     _buildEnemiesAtlas: function(w, h) {
         var d = this._defPct.bind(this);
         // Row 1: Dogs, Magpies, Van
-        d('dog_0',     'enemies', 0.00, 0.00, 0.11, 0.17, 16, 14, w, h);
-        d('dog_1',     'enemies', 0.10, 0.00, 0.11, 0.17, 16, 14, w, h);
-        d('magpie_0',  'enemies', 0.21, 0.00, 0.08, 0.13, 16, 14, w, h);
-        d('magpie_1',  'enemies', 0.29, 0.00, 0.08, 0.13, 16, 14, w, h);
-        d('magpie_swoop', 'enemies', 0.37, 0.00, 0.10, 0.15, 18, 18, w, h);
-        d('seagull_0', 'enemies', 0.21, 0.00, 0.08, 0.13, 16, 14, w, h);
-        d('seagull_1', 'enemies', 0.29, 0.00, 0.08, 0.13, 16, 14, w, h);
-        d('van',       'enemies', 0.56, 0.00, 0.43, 0.37, 48, 28, w, h);
+        d('dog_0',     'enemies', 0.000, 0.00, 0.075, 0.15, 16, 14, w, h);
+        d('dog_1',     'enemies', 0.085, 0.00, 0.075, 0.15, 16, 14, w, h);
+        d('magpie_0',  'enemies', 0.21, 0.00, 0.065, 0.12, 16, 14, w, h);
+        d('magpie_1',  'enemies', 0.29, 0.00, 0.065, 0.12, 16, 14, w, h);
+        d('magpie_swoop', 'enemies', 0.37, 0.00, 0.08, 0.14, 18, 18, w, h);
+        d('seagull_0', 'enemies', 0.21, 0.00, 0.065, 0.12, 16, 14, w, h);
+        d('seagull_1', 'enemies', 0.29, 0.00, 0.065, 0.12, 16, 14, w, h);
+        d('van',       'enemies', 0.56, 0.00, 0.43, 0.35, 48, 28, w, h);
 
         // Row 2: Person, Bin, Mower, Emu, Drop Bear
-        d('person_0',  'enemies', 0.00, 0.20, 0.10, 0.24, 16, 24, w, h);
-        d('person_1',  'enemies', 0.10, 0.20, 0.10, 0.24, 16, 24, w, h);
-        d('bin',       'enemies', 0.21, 0.22, 0.07, 0.18, 12, 16, w, h);
-        d('mower',     'enemies', 0.29, 0.21, 0.15, 0.18, 22, 16, w, h);
-        d('emu_0',     'enemies', 0.48, 0.15, 0.15, 0.32, 22, 26, w, h);
-        d('emu_1',     'enemies', 0.62, 0.15, 0.15, 0.32, 22, 26, w, h);
-        d('dropbear',  'enemies', 0.80, 0.19, 0.13, 0.20, 16, 16, w, h);
+        d('person_0',  'enemies', 0.000, 0.20, 0.08, 0.22, 16, 24, w, h);
+        d('person_1',  'enemies', 0.09,  0.20, 0.08, 0.22, 16, 24, w, h);
+        d('bin',       'enemies', 0.21, 0.22, 0.06, 0.16, 12, 16, w, h);
+        d('mower',     'enemies', 0.29, 0.21, 0.13, 0.16, 22, 16, w, h);
+        d('emu_0',     'enemies', 0.48, 0.15, 0.12, 0.30, 22, 26, w, h);
+        d('emu_1',     'enemies', 0.62, 0.15, 0.12, 0.30, 22, 26, w, h);
+        d('dropbear',  'enemies', 0.80, 0.19, 0.11, 0.18, 16, 16, w, h);
 
         // Row 3: Cat, Road Train, Rottweiler, Chihuahua
-        d('cat_0',     'enemies', 0.00, 0.47, 0.09, 0.16, 14, 14, w, h);
-        d('cat_1',     'enemies', 0.09, 0.47, 0.11, 0.16, 16, 14, w, h);
-        d('roadtrain', 'enemies', 0.00, 0.63, 0.52, 0.22, 64, 24, w, h);
-        d('rottweiler_0', 'enemies', 0.32, 0.56, 0.24, 0.40, 48, 40, w, h);
-        d('rottweiler_1', 'enemies', 0.55, 0.56, 0.24, 0.40, 48, 40, w, h);
-        d('chihuahua_0', 'enemies', 0.80, 0.80, 0.10, 0.16, 12, 10, w, h);
-        d('chihuahua_1', 'enemies', 0.90, 0.80, 0.10, 0.16, 12, 10, w, h);
+        d('cat_0',     'enemies', 0.000, 0.47, 0.07, 0.14, 14, 14, w, h);
+        d('cat_1',     'enemies', 0.08,  0.47, 0.08, 0.14, 16, 14, w, h);
+        d('roadtrain', 'enemies', 0.00, 0.63, 0.50, 0.20, 64, 24, w, h);
+        d('rottweiler_0', 'enemies', 0.32, 0.56, 0.20, 0.38, 48, 40, w, h);
+        d('rottweiler_1', 'enemies', 0.55, 0.56, 0.20, 0.38, 48, 40, w, h);
+        d('chihuahua_0', 'enemies', 0.80, 0.80, 0.08, 0.14, 12, 10, w, h);
+        d('chihuahua_1', 'enemies', 0.90, 0.80, 0.08, 0.14, 12, 10, w, h);
     },
 
     // PROJECTILES & PICKUPS (2816 x 1536)
@@ -196,38 +202,42 @@ PR.ImageSprites = {
     },
 
     // BACKGROUNDS (2816 x 1536)
-    // 2x3 grid of panels. Each panel has two strips separated by dashed line:
-    //   Top: Far parallax (sky + distant scenery)
-    //   Bottom: Near parallax (detailed houses/buildings with ground)
-    //
-    // Far parallax fills the sky area behind everything.
-    // Near parallax sits just above ground, providing midground detail.
-    // Game ground tiles are drawn ON TOP, covering any overlap at the bottom.
+    // 4-column x 2-row grid. Col 0 = ground tiles, Cols 1-3 = theme panels.
+    // Each cell is 0.25 wide x 0.50 tall (704 x 768 px).
+    // Each panel has two strips separated by a gap:
+    //   Top strip: Far parallax (sky + distant scenery) - background layer
+    //   Bottom strip: Near parallax (houses/buildings) - midground layer
+    // The tilemap provides the foreground layer (ground tiles on top).
     _buildBackgroundsAtlas: function(w, h) {
         var d = this._defPct.bind(this);
 
+        // Panel positions in the 4x2 grid (skipping col 0 ground tiles)
         var panels = [
-            { theme: 0, px: 0.000, py: 0.000 }, // Suburban
-            { theme: 1, px: 0.333, py: 0.000 }, // Urban
-            { theme: 2, px: 0.667, py: 0.000 }, // Regional
-            { theme: 3, px: 0.333, py: 0.500 }, // Coastal
-            { theme: 4, px: 0.667, py: 0.500 }  // Outback
+            { theme: 0, px: 0.250, py: 0.000 }, // Suburban (col 1, row 0)
+            { theme: 1, px: 0.500, py: 0.000 }, // Urban (col 2, row 0)
+            { theme: 2, px: 0.750, py: 0.000 }, // Regional (col 3, row 0)
+            { theme: 3, px: 0.500, py: 0.500 }, // Coastal (col 2, row 1)
+            { theme: 4, px: 0.750, py: 0.500 }  // Outback (col 3, row 1)
         ];
 
         for (var i = 0; i < panels.length; i++) {
             var p = panels[i];
             var t = p.theme;
 
-            // Far parallax - sky + distant scenery (top ~42% of panel)
-            // Wide strip for seamless horizontal tiling
+            // Far parallax - sky + distant scenery (top strip of panel cell)
+            // Positioned behind everything, scrolls at 0.2x camera speed
             d('parallax_far_' + t, 'backgrounds',
-                p.px + 0.04, p.py + 0.01, 0.29, 0.20, 160, 60, w, h);
+                p.px + 0.005, p.py + 0.015, 0.24, 0.19, 200, 120, w, h);
 
-            // Near parallax - houses/buildings (bottom ~48% of panel)
-            // Includes ground/grass that aligns with game ground tiles
+            // Near parallax - houses/buildings (bottom strip of panel cell)
+            // Sits above ground, scrolls at 0.5x camera speed
             d('parallax_near_' + t, 'backgrounds',
-                p.px + 0.003, p.py + 0.26, 0.33, 0.22, 160, 52, w, h);
+                p.px + 0.005, p.py + 0.27, 0.24, 0.21, 200, 80, w, h);
         }
+
+        // Ground cross-section tiles (col 0, used by tilemap renderer)
+        d('ground_tile_grass', 'backgrounds', 0.01, 0.02, 0.08, 0.15, 16, 16, w, h);
+        d('ground_tile_sand',  'backgrounds', 0.01, 0.52, 0.08, 0.15, 16, 16, w, h);
     },
 
     // UI (2816 x 1536)
