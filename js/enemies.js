@@ -1,4 +1,4 @@
-// Postie Run - Enemy System
+// Postie Run - Enemy System (Enhanced with corpse deaths)
 PR.Enemies = {
     list: [],
 
@@ -16,10 +16,24 @@ PR.Enemies = {
         for (var i = this.list.length - 1; i >= 0; i--) {
             var e = this.list[i];
             e.update();
+
+            // Dying corpse: keep animating until offscreen
+            if (e.dying) {
+                e.deathSpin += 0.2;
+                e.x += e.deathVx;
+                e.y += e.deathVy;
+                e.deathVy += 0.3;
+                e.dyingTimer++;
+                if (e.dyingTimer > 120 || e.y > PR.Camera.y + PR.Camera.viewH + 60) {
+                    e.alive = false;
+                    e.dying = false;
+                }
+                continue;
+            }
+
             if (!e.alive) {
                 if (e.health <= 0) {
                     PR.Player.addScore(e.scoreValue);
-                    // Drop chance
                     if (Math.random() < e.dropChance) {
                         PR.Pickups.spawnRandom(e.x + e.w / 2, e.y);
                     }
@@ -59,6 +73,12 @@ PR.Enemy = function(type, x, y, params) {
     this.canBeStomped = false;
     this.contactDamage = 1;
     this.isBoss = false;
+    this.dying = false;
+    this.dyingTimer = 0;
+    this.deathVx = 0;
+    this.deathVy = 0;
+    this.deathSpin = 0;
+    this.warningTimer = 0;
 
     // Type-specific setup
     var cfg = PR.Enemy.CONFIGS[type];
@@ -120,7 +140,7 @@ PR.Enemy.prototype.update = function() {
     // Remove if far off screen left
     if (this.x < PR.Camera.x - 120) this.alive = false;
     // Remove if fell off world
-    if (this.y > PR.CONST.CANVAS_H + 50) this.alive = false;
+    if (this.y > PR.Camera.y + PR.Camera.viewH + 50) this.alive = false;
 };
 
 PR.Enemy.prototype._resolveGround = function() {
@@ -152,7 +172,6 @@ PR.Enemy.prototype.takeDamage = function(amount, stampHit) {
 };
 
 PR.Enemy.prototype.die = function(stampHit) {
-    this.alive = false;
     PR.Particles.emit(this.x + this.w / 2, this.y + this.h / 2, 'explosion');
     if (stampHit) {
         PR.Particles.emitStampMark(this.x + this.w / 2 - 7, this.y + this.h / 2 - 4);
@@ -161,24 +180,67 @@ PR.Enemy.prototype.die = function(stampHit) {
     PR.Audio.play('explosion');
 
     if (this.isBoss) {
-        // Big boss explosion
-        for (var i = 0; i < 5; i++) {
+        this.alive = false;
+        // Big boss explosion chain
+        for (var i = 0; i < 8; i++) {
             setTimeout(function(ex, ey) {
                 PR.Particles.emit(
-                    ex + PR.Utils.randInt(-20, 20),
-                    ey + PR.Utils.randInt(-20, 20),
+                    ex + PR.Utils.randInt(-30, 30),
+                    ey + PR.Utils.randInt(-30, 30),
                     'explosion'
                 );
-            }, i * 200, this.x + this.w / 2, this.y + this.h / 2);
+                PR.Camera.shake(4, 8);
+            }, i * 150, this.x + this.w / 2, this.y + this.h / 2);
         }
-        PR.Camera.shake(8, 30);
+        PR.Camera.shake(10, 40);
+        if (PR.Game) { PR.Game.hitstop(12); PR.Game.flash('#FFFFFF', 0.8); }
+        return;
     }
+
+    // Corpse flies away dramatically instead of disappearing
+    this.dying = true;
+    this.dyingTimer = 0;
+    this.contactDamage = 0;
+    var dirFromPlayer = this.x > PR.Player.x ? 1 : -1;
+    this.deathVx = dirFromPlayer * PR.Utils.randFloat(2, 4);
+    this.deathVy = -PR.Utils.randFloat(4, 7);
+    this.deathSpin = 0;
+    PR.Particles.emit(this.x + this.w / 2, this.y + this.h / 2, 'spark');
 };
 
 PR.Enemy.prototype.render = function(ctx) {
-    if (this.flashTimer > 0 && this.flashTimer % 2 === 0) return;
+    if (this.flashTimer > 0 && this.flashTimer % 2 === 0 && !this.dying) return;
+
+    // Warning indicator
+    if (this.warningTimer > 0) {
+        this.warningTimer--;
+        ctx.fillStyle = '#FFD700';
+        PR.Utils.drawText(ctx, '!', this.x + this.w / 2 - 2, this.y - 10, '#FFD700', 1);
+    }
 
     var cfg = PR.Enemy.CONFIGS[this.type];
+
+    // Dying corpse: draw rotated and fading
+    if (this.dying) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - this.dyingTimer / 90);
+        ctx.translate(this.x + this.w / 2, this.y + this.h / 2);
+        ctx.rotate(this.deathSpin);
+        ctx.translate(-this.w / 2, -this.h / 2);
+        if (cfg && cfg.render) {
+            // Temporarily shift position for render
+            var ox = this.x, oy = this.y;
+            this.x = 0; this.y = 0;
+            cfg.render.call(this, ctx);
+            this.x = ox; this.y = oy;
+        } else {
+            ctx.fillStyle = '#FF0000';
+            ctx.fillRect(0, 0, this.w, this.h);
+        }
+        ctx.restore();
+        return;
+    }
+
     if (cfg && cfg.render) {
         cfg.render.call(this, ctx);
     } else {
@@ -199,19 +261,34 @@ PR.Enemy.prototype.getBounds = function() {
 // ENEMY TYPE CONFIGURATIONS
 // ============================================================
 PR.Enemy.CONFIGS = {
-    // ANGRY DOG
+    // ANGRY DOG - lunges and barks
     dog: {
-        w: 14, h: 10, health: 2, score: 200, speed: 2.5,
+        w: 14, h: 10, health: 2, score: 200, speed: 1.75,
         dropChance: 0.15, contactDamage: 1, canBeStomped: true,
-        init: function() { this.aiState = 'chase'; },
+        init: function() {
+            this.aiState = 'chase';
+            this.barkTimer = PR.Utils.randInt(30, 90);
+        },
         update: function() {
-            // Chase player
             var dx = PR.Player.x - this.x;
             this.facing = dx > 0 ? 1 : -1;
+
+            this.barkTimer--;
+            if (this.barkTimer <= 0) {
+                // Bark then lunge
+                this.barkTimer = PR.Utils.randInt(60, 120);
+                if (Math.abs(dx) < 80) {
+                    this.warningTimer = 10;
+                    this.vx = this.facing * this.speed * 2;
+                    if (this.grounded) this.vy = -3;
+                    PR.Audio.play('dog_bark');
+                    return;
+                }
+            }
+
             this.vx = this.facing * this.speed;
-            // Jump if close
-            if (Math.abs(dx) < 40 && this.grounded && Math.random() < 0.03) {
-                this.vy = -4;
+            if (Math.abs(dx) < 40 && this.grounded && Math.random() < 0.04) {
+                this.vy = -4.5;
             }
         },
         render: function(ctx) {
@@ -222,7 +299,7 @@ PR.Enemy.CONFIGS = {
 
     // SWOOPING MAGPIE
     magpie: {
-        w: 14, h: 10, health: 2, score: 300, speed: 1.5,
+        w: 14, h: 10, health: 2, score: 300, speed: 1.05,
         dropChance: 0.1, contactDamage: 1, flying: true,
         init: function() {
             this.baseY = this.y;
@@ -261,7 +338,7 @@ PR.Enemy.CONFIGS = {
 
     // SEAGULL (coastal reskin of magpie)
     seagull: {
-        w: 14, h: 10, health: 2, score: 300, speed: 1.3,
+        w: 14, h: 10, health: 2, score: 300, speed: 0.91,
         dropChance: 0.1, contactDamage: 1, flying: true,
         init: function() {
             this.baseY = this.y;
@@ -281,12 +358,12 @@ PR.Enemy.CONFIGS = {
 
     // AMAZON VAN
     van: {
-        w: 44, h: 22, health: 5, score: 500, speed: 2.8,
+        w: 44, h: 22, health: 5, score: 500, speed: 1.96,
         dropChance: 0.4, contactDamage: 2,
         init: function(params) {
             this.fromRight = params.fromRight !== false;
             if (this.fromRight) {
-                this.x = PR.Camera.x + PR.CONST.CANVAS_W + 20;
+                this.x = PR.Camera.x + PR.Camera.viewW + 20;
                 this.facing = -1;
                 this.vx = -this.speed;
             } else {
@@ -304,7 +381,7 @@ PR.Enemy.CONFIGS = {
             this.vx = this.facing * this.speed;
             // Remove if passed through
             if (this.facing < 0 && this.x < PR.Camera.x - 80) this.alive = false;
-            if (this.facing > 0 && this.x > PR.Camera.x + PR.CONST.CANVAS_W + 80) this.alive = false;
+            if (this.facing > 0 && this.x > PR.Camera.x + PR.Camera.viewW + 80) this.alive = false;
         },
         render: function(ctx) {
             PR.SpriteCache.draw(ctx, 'van', this.x - 2, this.y - 4, this.facing > 0);
@@ -383,7 +460,7 @@ PR.Enemy.CONFIGS = {
 
     // LAWN MOWER
     mower: {
-        w: 18, h: 12, health: 3, score: 350, speed: 0.8,
+        w: 18, h: 12, health: 3, score: 350, speed: 0.56,
         dropChance: 0.2, contactDamage: 2,
         init: function() {
             this.startX = this.x;
@@ -456,7 +533,7 @@ PR.Enemy.CONFIGS = {
 
     // EMU
     emu: {
-        w: 16, h: 22, health: 4, score: 400, speed: 2.2,
+        w: 16, h: 22, health: 4, score: 400, speed: 1.54,
         dropChance: 0.2, contactDamage: 2,
         init: function() { this.aiState = 'chase'; },
         update: function() {
@@ -492,7 +569,7 @@ PR.Enemy.CONFIGS = {
             } else if (this.aiState === 'dropping') {
                 this.vy += 0.3;
                 if (this.vy > 5) this.vy = 5;
-                if (this.y > PR.CONST.CANVAS_H + 20) this.alive = false;
+                if (this.y > PR.Camera.y + PR.Camera.viewH + 20) this.alive = false;
             }
         },
         render: function(ctx) {
@@ -502,16 +579,16 @@ PR.Enemy.CONFIGS = {
 
     // ROAD TRAIN
     roadtrain: {
-        w: 60, h: 20, health: 10, score: 1000, speed: 3.5,
+        w: 60, h: 20, health: 10, score: 1000, speed: 2.45,
         dropChance: 0.5, contactDamage: 3,
         init: function() {
-            this.x = PR.Camera.x + PR.CONST.CANVAS_W + 30;
+            this.x = PR.Camera.x + PR.Camera.viewW + 30;
             this.facing = -1;
             this.honked = false;
         },
         update: function() {
             this.vx = -this.speed;
-            if (!this.honked && this.x < PR.Camera.x + PR.CONST.CANVAS_W + 10) {
+            if (!this.honked && this.x < PR.Camera.x + PR.Camera.viewW + 10) {
                 PR.Audio.play('van_horn');
                 PR.Audio.play('van_horn');
                 this.honked = true;
@@ -523,71 +600,135 @@ PR.Enemy.CONFIGS = {
         }
     },
 
-    // BOSS: GIANT ROTTWEILER
+    // BOSS: GIANT ROTTWEILER - 3 Phase Fight
     rottweiler: {
-        w: 44, h: 36, health: 50, score: 5000, speed: 1.5,
+        w: 44, h: 36, health: 50, score: 5000, speed: 1.05,
         dropChance: 0, contactDamage: 3, isBoss: true,
         init: function() {
             this.aiState = 'idle';
             this.aiTimer = 60;
             this.attackPattern = 0;
-            this.summonCount = 0;
             this.maxSummons = 3;
-            this.phaseTwo = false;
+            this.phase = 1;
+            this.enrageTimer = 0;
+            this.droolTimer = 0;
         },
         update: function() {
-            if (!this.phaseTwo && this.health < this.maxHealth / 2) {
-                this.phaseTwo = true;
-                this.speed = 2.5;
+            // Phase transitions
+            var hpPct = this.health / this.maxHealth;
+            if (this.phase === 1 && hpPct <= 0.5) {
+                this.phase = 2;
+                this.speed = 1.54;
                 this.maxSummons = 5;
-                PR.Camera.shake(6, 20);
+                PR.Camera.shake(8, 25);
+                if (PR.Game) { PR.Game.flash('#FF0000', 0.4); PR.Game.hitstop(8); }
+                PR.Audio.play('dog_bark');
+            } else if (this.phase === 2 && hpPct <= 0.25) {
+                this.phase = 3;
+                this.speed = 2.1;
+                this.maxSummons = 6;
+                this.contactDamage = 4;
+                PR.Camera.shake(10, 30);
+                if (PR.Game) { PR.Game.flash('#FF0000', 0.6); PR.Game.hitstop(10); PR.Game._announce('FINAL PHASE!', '#FF0000', 3); }
+                PR.Audio.play('dog_bark');
+            }
+
+            // Enrage (phase 2+): periodic speed boost
+            if (this.phase >= 2) {
+                this.enrageTimer++;
+                if (this.enrageTimer % 300 < 60) {
+                    this.speed = this.phase === 3 ? 2.8 : 2.1;
+                } else {
+                    this.speed = this.phase === 3 ? 2.1 : 1.54;
+                }
+            }
+
+            // Drool particles (phase 2+)
+            this.droolTimer++;
+            if (this.phase >= 2 && this.droolTimer % 12 === 0) {
+                PR.Particles.emit(this.facing > 0 ? this.x + this.w : this.x, this.y + 20, 'smoke');
             }
 
             this.facing = PR.Player.x > this.x ? 1 : -1;
             this.aiTimer--;
 
+            var numAttacks = this.phase === 3 ? 6 : this.phase === 2 ? 5 : 4;
             if (this.aiTimer <= 0) {
-                this.attackPattern = (this.attackPattern + 1) % 4;
+                this.attackPattern = (this.attackPattern + 1) % numAttacks;
+                this.warningTimer = 15;
+                var bx, i, sx, sy;
                 switch (this.attackPattern) {
                     case 0: // Charge
                         this.aiState = 'charge';
                         this.vx = this.facing * this.speed * 2.5;
-                        this.aiTimer = 40;
+                        this.aiTimer = this.phase === 3 ? 25 : 35;
                         PR.Audio.play('dog_bark');
+                        PR.Camera.shake(2, 10);
                         break;
                     case 1: // Leap
                         this.aiState = 'leap';
-                        this.vy = -6;
-                        this.vx = this.facing * 2;
-                        this.aiTimer = 50;
+                        this.vy = this.phase >= 2 ? -8 : -6;
+                        this.vx = this.facing * (this.phase >= 2 ? 3 : 2);
+                        this.aiTimer = 45;
                         break;
-                    case 2: // Bark projectile
+                    case 2: // Bark projectiles
                         this.aiState = 'bark';
-                        var bx = this.facing > 0 ? this.x + this.w : this.x - 8;
+                        bx = this.facing > 0 ? this.x + this.w : this.x - 8;
                         PR.Projectiles.spawnEnemy(bx, this.y + 12, this.facing * 3, 0, 'card', 2);
                         PR.Projectiles.spawnEnemy(bx, this.y + 8, this.facing * 3, -1, 'card', 2);
-                        this.aiTimer = 40;
+                        if (this.phase >= 2) {
+                            PR.Projectiles.spawnEnemy(bx, this.y + 16, this.facing * 3, 0.5, 'card', 2);
+                        }
+                        if (this.phase >= 3) {
+                            PR.Projectiles.spawnEnemy(bx, this.y + 4, this.facing * 3, -2, 'card', 2);
+                        }
+                        this.aiTimer = this.phase === 3 ? 25 : 35;
                         PR.Audio.play('dog_bark');
-                        PR.Camera.shake(2, 6);
+                        PR.Camera.shake(3, 8);
                         break;
                     case 3: // Summon chihuahuas
                         this.aiState = 'summon';
-                        this.aiTimer = 60;
-                        for (var i = 0; i < this.maxSummons; i++) {
-                            var sx = this.x + PR.Utils.randInt(-40, 40);
-                            var sy = this.y - 20;
+                        this.aiTimer = this.phase === 3 ? 35 : 50;
+                        for (i = 0; i < this.maxSummons; i++) {
+                            sx = this.x + PR.Utils.randInt(-40, 40);
+                            sy = this.y - 20;
                             PR.Enemies.spawn('chihuahua', sx, sy);
                         }
                         PR.Audio.play('dog_bark');
+                        PR.Camera.shake(2, 6);
+                        break;
+                    case 4: // Ground pound (phase 2+) - shockwave
+                        this.aiState = 'pound';
+                        this.vy = 8;
+                        this.aiTimer = 40;
+                        setTimeout(function() {
+                            PR.Camera.shake(6, 15);
+                            PR.Audio.play('explosion');
+                            if (PR.Game) PR.Game.flash('#FFFFFF', 0.3);
+                            // Shockwave damage check
+                            if (Math.abs(PR.Player.y + PR.Player.h - PR.Level.data.groundY * PR.CONST.TILE_SIZE) < 8) {
+                                PR.Player.takeDamage(2);
+                            }
+                        }, 200);
+                        break;
+                    case 5: // Howl (phase 3) - stun player
+                        this.aiState = 'howl';
+                        this.aiTimer = 50;
+                        PR.Audio.play('dog_bark');
+                        PR.Camera.shake(4, 20);
+                        // Stun if close
+                        if (PR.Utils.dist(this.x, this.y, PR.Player.x, PR.Player.y) < 80) {
+                            PR.Player.hurtTimer = Math.max(PR.Player.hurtTimer, 20);
+                        }
                         break;
                 }
             }
 
             if (this.aiState === 'charge') {
-                // vx already set
-            } else if (this.aiState === 'leap') {
-                // Gravity handled externally
-            } else if (this.aiState === 'idle' || this.aiState === 'bark' || this.aiState === 'summon') {
+                // vx set above
+            } else if (this.aiState === 'leap' || this.aiState === 'pound') {
+                // gravity handled externally
+            } else {
                 this.vx *= 0.9;
             }
 
@@ -596,30 +737,52 @@ PR.Enemy.CONFIGS = {
                 this.x = PR.Camera.x + 20;
                 this.vx = Math.abs(this.vx);
             }
-            if (this.x > PR.Camera.x + PR.CONST.CANVAS_W - this.w - 20) {
-                this.x = PR.Camera.x + PR.CONST.CANVAS_W - this.w - 20;
+            if (this.x > PR.Camera.x + PR.Camera.viewW - this.w - 20) {
+                this.x = PR.Camera.x + PR.Camera.viewW - this.w - 20;
                 this.vx = -Math.abs(this.vx);
             }
         },
         render: function(ctx) {
             var key = 'rottweiler_' + (this.animFrame % 2);
+            // Phase coloring
+            if (this.phase >= 3 && this.animTimer % 4 < 2) {
+                ctx.globalAlpha = 0.8;
+            }
             PR.SpriteCache.draw(ctx, key, this.x - 2, this.y - 2, this.facing > 0);
+            ctx.globalAlpha = 1;
 
-            // Boss health bar
-            var barW = 80;
+            // Phase 2+ red tint overlay
+            if (this.phase >= 2) {
+                ctx.globalAlpha = 0.15 + (this.phase === 3 ? 0.1 : 0);
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                ctx.globalAlpha = 1;
+            }
+
+            // Boss health bar (full width at top)
+            var barW = 120;
             var barX = this.x + this.w / 2 - barW / 2;
-            var barY = this.y - 10;
+            var barY = this.y - 12;
             var pct = this.health / this.maxHealth;
             ctx.fillStyle = '#000000';
-            ctx.fillRect(barX, barY, barW, 4);
-            ctx.fillStyle = pct > 0.3 ? '#CC0000' : '#FF0000';
-            ctx.fillRect(barX + 1, barY + 1, (barW - 2) * pct, 2);
+            ctx.fillRect(barX - 1, barY - 1, barW + 2, 7);
+            // Color by phase
+            var barColor = this.phase === 3 ? '#FF0000' : this.phase === 2 ? '#FF4400' : '#CC0000';
+            if (this.flashTimer > 0) barColor = '#FFFFFF';
+            ctx.fillStyle = barColor;
+            ctx.fillRect(barX, barY, barW * pct, 5);
+            // Phase markers
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(barX + barW * 0.5, barY, 1, 5);
+            ctx.fillRect(barX + barW * 0.25, barY, 1, 5);
+            // Boss name
+            PR.Utils.drawText(ctx, 'GIANT ROTTWEILER', barX, barY - 8, '#FF4444', 1);
         }
     },
 
     // CHIHUAHUA (boss summon)
     chihuahua: {
-        w: 8, h: 6, health: 1, score: 100, speed: 2.8,
+        w: 8, h: 6, health: 1, score: 100, speed: 1.96,
         dropChance: 0.05, contactDamage: 1, canBeStomped: true,
         init: function() {},
         update: function() {

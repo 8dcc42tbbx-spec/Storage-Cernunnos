@@ -13,10 +13,13 @@ PR.Projectiles = {
             x: x, y: y, vx: vx, vy: vy,
             type: type, damage: damage,
             alive: true, animFrame: 0, animTimer: 0,
-            w: type === 'stamp' ? 8 : type === 'parcel' ? 7 : type === 'cannon' ? 5 : 4,
-            h: type === 'stamp' ? 8 : type === 'parcel' ? 5 : type === 'cannon' ? 4 : 2,
+            w: type === 'stamp' ? 8 : type === 'grenade' ? 6 : type === 'parcel' ? 7 : type === 'cannon' ? 5 : 4,
+            h: type === 'stamp' ? 8 : type === 'grenade' ? 6 : type === 'parcel' ? 5 : type === 'cannon' ? 4 : 2,
             isStamp: type === 'stamp',
-            pierce: type === 'stamp' ? 2 : 0 // stamp can pierce through 2 enemies
+            isGrenade: type === 'grenade',
+            grenadeTimer: type === 'grenade' ? 45 : 0,
+            bounced: false,
+            pierce: type === 'stamp' ? 2 : 0
         });
     },
 
@@ -36,9 +39,48 @@ PR.Projectiles = {
             p.x += p.vx;
             p.y += p.vy;
 
-            // Gravity for parcels
+            // Gravity for parcels and grenades
             if (p.type === 'parcel') {
                 p.vy += 0.04;
+            } else if (p.isGrenade) {
+                p.vy += 0.25;
+                p.grenadeTimer--;
+
+                // Grenade bounces on ground
+                if (PR.Level && PR.Level.tilemap) {
+                    var gtx = Math.floor((p.x + p.w / 2) / PR.CONST.TILE_SIZE);
+                    var gty = Math.floor((p.y + p.h) / PR.CONST.TILE_SIZE);
+                    if (PR.Level.tilemap.isSolid(gtx, gty) && p.vy > 0) {
+                        if (!p.bounced) {
+                            p.bounced = true;
+                            p.vy = -3;
+                            p.vx *= 0.5;
+                        } else {
+                            p.vy = 0;
+                            p.vx *= 0.8;
+                        }
+                        p.y = gty * PR.CONST.TILE_SIZE - p.h;
+                    }
+                }
+
+                // Grenade explodes
+                if (p.grenadeTimer <= 0) {
+                    p.alive = false;
+                    PR.Particles.emit(p.x, p.y, 'explosion');
+                    PR.Particles.emit(p.x, p.y, 'explosion');
+                    PR.Camera.shake(6, 15);
+                    PR.Audio.play('explosion');
+                    if (PR.Game) PR.Game.flash('#FFFFFF', 0.5);
+                    // Damage all enemies in radius
+                    for (var ge = 0; ge < PR.Enemies.list.length; ge++) {
+                        var en = PR.Enemies.list[ge];
+                        if (!en.alive || en.dying) continue;
+                        if (PR.Utils.dist(p.x, p.y, en.x + en.w / 2, en.y + en.h / 2) < 45) {
+                            en.takeDamage(3, false);
+                        }
+                    }
+                    continue;
+                }
             }
 
             // Stamp spins
@@ -49,13 +91,13 @@ PR.Projectiles = {
             }
 
             // Remove if offscreen
-            if (p.x < PR.Camera.x - 20 || p.x > PR.Camera.x + PR.CONST.CANVAS_W + 20 ||
-                p.y < -20 || p.y > PR.CONST.CANVAS_H + 20) {
+            if (p.x < PR.Camera.x - 20 || p.x > PR.Camera.x + PR.Camera.viewW + 20 ||
+                p.y < PR.Camera.y - 20 || p.y > PR.Camera.y + PR.Camera.viewH + 20) {
                 p.alive = false;
             }
 
-            // Tile collision
-            if (PR.Level && PR.Level.tilemap) {
+            // Tile collision (skip for grenades, they bounce instead)
+            if (!p.isGrenade && PR.Level && PR.Level.tilemap) {
                 var tx = Math.floor((p.x + p.w / 2) / PR.CONST.TILE_SIZE);
                 var ty = Math.floor((p.y + p.h / 2) / PR.CONST.TILE_SIZE);
                 if (PR.Level.tilemap.isSolid(tx, ty)) {
@@ -64,10 +106,11 @@ PR.Projectiles = {
                 }
             }
 
-            // Enemy collision
+            // Enemy collision (skip for grenades, they explode on timer)
+            if (!p.isGrenade) {
             for (var j = 0; j < PR.Enemies.list.length; j++) {
                 var e = PR.Enemies.list[j];
-                if (!e.alive) continue;
+                if (!e.alive || e.dying) continue;
                 if (PR.Utils.aabb(
                     { x: p.x, y: p.y, w: p.w, h: p.h },
                     e.getBounds()
@@ -81,6 +124,7 @@ PR.Projectiles = {
                     PR.Particles.emit(p.x, p.y, 'spark');
                     break;
                 }
+            }
             }
 
             if (!p.alive) {
@@ -102,8 +146,8 @@ PR.Projectiles = {
             }
 
             // Offscreen removal
-            if (ep.x < PR.Camera.x - 20 || ep.x > PR.Camera.x + PR.CONST.CANVAS_W + 20 ||
-                ep.y > PR.CONST.CANVAS_H + 20) {
+            if (ep.x < PR.Camera.x - 20 || ep.x > PR.Camera.x + PR.Camera.viewW + 20 ||
+                ep.y > PR.Camera.y + PR.Camera.viewH + 20) {
                 ep.alive = false;
             }
 
@@ -127,6 +171,18 @@ PR.Projectiles = {
         for (var i = 0; i < this.player.length; i++) {
             var p = this.player[i];
             var key;
+            if (p.type === 'grenade') {
+                // Draw grenade as flashing circle
+                var flash = p.grenadeTimer < 15 && p.grenadeTimer % 4 < 2;
+                ctx.fillStyle = flash ? '#FF0000' : '#444444';
+                ctx.fillRect(Math.round(p.x), Math.round(p.y), 6, 6);
+                ctx.fillStyle = flash ? '#FFFF00' : '#888888';
+                ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y) + 1, 4, 4);
+                // Fuse spark
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(Math.round(p.x) + 3, Math.round(p.y) - 1, 1, 1);
+                continue;
+            }
             switch (p.type) {
                 case 'parcel': key = 'proj_parcel'; break;
                 case 'cannon': key = 'proj_cannon'; break;
