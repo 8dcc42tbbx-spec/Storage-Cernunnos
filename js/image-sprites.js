@@ -1,4 +1,4 @@
-// Postie Run - Image-Based Sprite System (v10)
+// Postie Run - Image-Based Sprite System (v11)
 // Loads Gemini PNG sprite sheets with transparent backgrounds
 // and maps regions to game sprite keys via monkey-patching PR.SpriteCache.draw.
 
@@ -202,42 +202,38 @@ PR.ImageSprites = {
     },
 
     // BACKGROUNDS (2816 x 1536)
-    // 4-column x 2-row grid. Col 0 = ground tiles, Cols 1-3 = theme panels.
-    // Each cell is 0.25 wide x 0.50 tall (704 x 768 px).
-    // Each panel has two strips separated by a gap:
-    //   Top strip: Far parallax (sky + distant scenery) - background layer
-    //   Bottom strip: Near parallax (houses/buildings) - midground layer
-    // The tilemap provides the foreground layer (ground tiles on top).
+    // 3-column x 2-row grid (each cell ~939x768 px = 0.333 x 0.500).
+    // Col 0 row 0 has a small ground tile in the top-left corner.
+    // Each panel has two horizontal strips separated by a gap:
+    //   Top strip: Far parallax (sky panorama) - background layer
+    //   Bottom strip: Near parallax (buildings) - midground layer
+    // The tilemap provides the foreground layer.
+    //
+    // Three rendered layers (back to front):
+    //   1. Far parallax  (scrolls 0.2x) - fills sky area
+    //   2. Near parallax (scrolls 0.5x) - buildings above ground
+    //   3. Tilemap ground (scrolls 1.0x) - on top of everything
     _buildBackgroundsAtlas: function(w, h) {
         var d = this._defPct.bind(this);
 
-        // Panel positions in the 4x2 grid (skipping col 0 ground tiles)
-        var panels = [
-            { theme: 0, px: 0.250, py: 0.000 }, // Suburban (col 1, row 0)
-            { theme: 1, px: 0.500, py: 0.000 }, // Urban (col 2, row 0)
-            { theme: 2, px: 0.750, py: 0.000 }, // Regional (col 3, row 0)
-            { theme: 3, px: 0.500, py: 0.500 }, // Coastal (col 2, row 1)
-            { theme: 4, px: 0.750, py: 0.500 }  // Outback (col 3, row 1)
-        ];
+        // Far strips (sky panoramas) - top portion of each panel
+        // Theme 0 (col 0) starts further right to avoid ground tile
+        d('parallax_far_0', 'backgrounds', 0.075, 0.007, 0.255, 0.18, 320, 140, w, h);
+        d('parallax_far_1', 'backgrounds', 0.336, 0.007, 0.327, 0.18, 320, 140, w, h);
+        d('parallax_far_2', 'backgrounds', 0.669, 0.007, 0.327, 0.18, 320, 140, w, h);
+        d('parallax_far_3', 'backgrounds', 0.336, 0.507, 0.327, 0.18, 320, 140, w, h);
+        d('parallax_far_4', 'backgrounds', 0.669, 0.507, 0.327, 0.18, 320, 140, w, h);
 
-        for (var i = 0; i < panels.length; i++) {
-            var p = panels[i];
-            var t = p.theme;
+        // Near strips (building panoramas) - bottom portion of each panel
+        d('parallax_near_0', 'backgrounds', 0.004, 0.255, 0.327, 0.23, 320, 80, w, h);
+        d('parallax_near_1', 'backgrounds', 0.336, 0.255, 0.327, 0.23, 320, 80, w, h);
+        d('parallax_near_2', 'backgrounds', 0.669, 0.255, 0.327, 0.23, 320, 80, w, h);
+        d('parallax_near_3', 'backgrounds', 0.336, 0.755, 0.327, 0.23, 320, 80, w, h);
+        d('parallax_near_4', 'backgrounds', 0.669, 0.755, 0.327, 0.23, 320, 80, w, h);
 
-            // Far parallax - sky + distant scenery (top strip of panel cell)
-            // Positioned behind everything, scrolls at 0.2x camera speed
-            d('parallax_far_' + t, 'backgrounds',
-                p.px + 0.005, p.py + 0.015, 0.24, 0.19, 200, 120, w, h);
-
-            // Near parallax - houses/buildings (bottom strip of panel cell)
-            // Sits above ground, scrolls at 0.5x camera speed
-            d('parallax_near_' + t, 'backgrounds',
-                p.px + 0.005, p.py + 0.27, 0.24, 0.21, 200, 80, w, h);
-        }
-
-        // Ground cross-section tiles (col 0, used by tilemap renderer)
-        d('ground_tile_grass', 'backgrounds', 0.01, 0.02, 0.08, 0.15, 16, 16, w, h);
-        d('ground_tile_sand',  'backgrounds', 0.01, 0.52, 0.08, 0.15, 16, 16, w, h);
+        // Ground cross-section tiles (col 0 corners)
+        d('ground_tile_grass', 'backgrounds', 0.01, 0.02, 0.06, 0.15, 16, 16, w, h);
+        d('ground_tile_sand',  'backgrounds', 0.01, 0.52, 0.06, 0.15, 16, 16, w, h);
     },
 
     // UI (2816 x 1536)
