@@ -85,8 +85,7 @@
         }
         .ctrl-btn:active { box-shadow: inset 2px 2px 0 rgba(0,0,0,0.35); transform: translateY(1px); }
         .ctrl-advance { width: 100%; background: #7a5c3e; color: #f2e2b6; }
-        .ctrl-up { flex: 1; background: #2c7a44; color: #f6f2e6; }
-        .ctrl-down { flex: 1; background: #8a2a2a; color: #f6f2e6; }
+        .ctrl-pick { flex: 1; background: #4a5a7a; color: #f6f2e6; font-size: 16px; padding: 16px 4px; }
     </style>
 </head>
 <body>
@@ -95,17 +94,18 @@
         <div id="scanlines"></div>
     </div>
     <div id="legend">
-        HOST CONTROLS &mdash; <b>SPACE</b>: advance / reveal answer &nbsp;|&nbsp;
-        <b>&uarr; UP</b>: room mostly got it right &nbsp;|&nbsp;
-        <b>&darr; DOWN</b>: room mostly missed it
-        <div class="hint">(keyboard on desktop, or use the buttons below on a tablet/touch device)</div>
+        HOST CONTROLS &mdash; <b>A B C D</b>: lock in the guess &nbsp;|&nbsp;
+        <b>SPACE</b>: advance / no answer
+        <div class="hint">(keyboard on desktop &mdash; A B C D or 1 2 3 4 &mdash; or the buttons below on a tablet)</div>
     </div>
     <div id="controls">
-        <button id="btnAdvance" class="ctrl-btn ctrl-advance" type="button">&#9654; ADVANCE / REVEAL</button>
         <div class="ctrl-row">
-            <button id="btnUp" class="ctrl-btn ctrl-up" type="button">&#9650; ROOM GOT IT RIGHT</button>
-            <button id="btnDown" class="ctrl-btn ctrl-down" type="button">&#9660; ROOM MISSED IT</button>
+            <button id="btnA" class="ctrl-btn ctrl-pick" type="button">A</button>
+            <button id="btnB" class="ctrl-btn ctrl-pick" type="button">B</button>
+            <button id="btnC" class="ctrl-btn ctrl-pick" type="button">C</button>
+            <button id="btnD" class="ctrl-btn ctrl-pick" type="button">D</button>
         </div>
+        <button id="btnAdvance" class="ctrl-btn ctrl-advance" type="button">&#9654; ADVANCE / NO ANSWER</button>
     </div>
 
     <script src="js/constants.js"></script>
@@ -123,8 +123,9 @@
             CY.Game.init(canvas);
 
             document.getElementById('btnAdvance').addEventListener('click', function () { CY.Game.action('ADVANCE'); });
-            document.getElementById('btnUp').addEventListener('click', function () { CY.Game.action('UP'); });
-            document.getElementById('btnDown').addEventListener('click', function () { CY.Game.action('DOWN'); });
+            ['A', 'B', 'C', 'D'].forEach(function (letter) {
+                document.getElementById('btn' + letter).addEventListener('click', function () { CY.Game.action(letter); });
+            });
         });
     </script>
 </body>

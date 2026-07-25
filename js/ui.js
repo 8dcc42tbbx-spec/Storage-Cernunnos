@@ -44,20 +44,24 @@ CY.UI = {};
         CY.drawTextBlock(ctx, text, x + 8, y + 8, scale || 1, C.ink, w - 16, 4);
     };
 
-    // options: array of 4 strings. correctIndex/revealed control the reveal glow.
-    CY.UI.drawOptions = function (ctx, x, y, w, options, correctIndex, revealed) {
+    // options: array of 4 strings. On reveal the correct row turns green; if the
+    // room's pick was wrong, that row turns red so the miss is obvious at a glance.
+    CY.UI.drawOptions = function (ctx, x, y, w, options, correctIndex, revealed, pickedIndex) {
         var letters = ['A', 'B', 'C', 'D'];
         var rowH = 13;
         for (var i = 0; i < options.length; i++) {
             var ry = y + i * rowH;
             var isCorrect = revealed && i === correctIndex;
-            rect(ctx, x, ry, w, rowH - 2, isCorrect ? C.green : C.parchment);
-            rect(ctx, x, ry, 14, rowH - 2, isCorrect ? '#2c7a44' : C.caveHi);
+            var isWrongPick = revealed && pickedIndex === i && i !== correctIndex;
+            var bg = isCorrect ? C.green : (isWrongPick ? C.red : C.parchment);
+            var tab = isCorrect ? '#2c7a44' : (isWrongPick ? '#8a2020' : C.caveHi);
+            var fg = (isCorrect || isWrongPick) ? C.white : C.ink;
+            rect(ctx, x, ry, w, rowH - 2, bg);
+            rect(ctx, x, ry, 14, rowH - 2, tab);
             CY.drawText(ctx, letters[i], x + 4, ry + 3, 1, C.white);
-            CY.drawText(ctx, options[i], x + 18, ry + 3, 1, isCorrect ? C.white : C.ink);
-            if (isCorrect) {
-                CY.drawText(ctx, '*', x + w - 10, ry + 3, 1, C.white);
-            }
+            CY.drawText(ctx, options[i], x + 18, ry + 3, 1, fg);
+            if (isCorrect) CY.drawText(ctx, '*', x + w - 10, ry + 3, 1, C.white);
+            else if (isWrongPick) CY.drawText(ctx, 'X', x + w - 10, ry + 3, 1, C.white);
         }
     };
 

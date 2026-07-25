@@ -1,6 +1,11 @@
 // Trivia data: Christopher Nolan's "The Odyssey" (2026)
 // Every answer below is fact-checked against real reporting on the film
 // (cast, production, box office, and reviews) as of July 2026.
+//
+// Correct answers are deliberately spread across the letters (C,B,D,A,D,B,C)
+// so a competitive room can't coast by noticing a positional pattern.
+// Numeric option sets stay in a natural order (ascending/descending) --
+// scrambling those to hit a letter would read as a mistake.
 var CY = CY || {};
 
 CY.QUESTIONS = [
@@ -8,12 +13,12 @@ CY.QUESTIONS = [
         scene: 'q1_zeuslaw',
         question: 'WHAT ANCIENT GREEK CONCEPT DOES NOLAN DRAMATIZE AS "ZEUS\' LAW"?',
         options: [
-            'XENIA -- SACRED HOSPITALITY TO STRANGERS',
             'HUBRIS -- DANGEROUS PRIDE',
             'OSTRACISM -- BANISHMENT BY VOTE',
+            'XENIA -- SACRED HOSPITALITY TO STRANGERS',
             "THE ORACLE'S PROPHECY"
         ],
-        correct: 0,
+        correct: 2,
         fact: '"ZEUS\' LAW" IS NOLAN\'S NAME FOR XENIA -- ANY STRANGER AT YOUR DOOR MIGHT SECRETLY BE A GOD.'
     },
     {
@@ -27,13 +32,13 @@ CY.QUESTIONS = [
         scene: 'q3_giants',
         question: 'HOW DID NOLAN MAKE THE LAESTRYGONIAN GIANTS LOOK GIGANTIC?',
         options: [
-            'FORCED PERSPECTIVE WITH REAL STUNT DOUBLES',
             'DIGITAL DE-AGING AND VFX SCALING',
             'GREEN-SCREEN COMPOSITES ONLY',
-            'TINY MODEL SETS WITH TOY FIGURES'
+            'TINY MODEL SETS WITH TOY FIGURES',
+            'FORCED PERSPECTIVE WITH REAL STUNT DOUBLES'
         ],
-        correct: 0,
-        fact: 'NOLAN PAIRED 7-FOOT STUNT PERFORMERS WITH DOUBLES UNDER 5 FEET TALL -- THE SAME TRICK LORD OF THE RINGS MADE FAMOUS.'
+        correct: 3,
+        fact: 'NOLAN PAIRED 7-FOOT STUNT PERFORMERS WITH SUB-5-FOOT DOUBLES -- THE LORD OF THE RINGS TRICK.'
     },
     {
         scene: 'q4_imax',
@@ -51,26 +56,26 @@ CY.QUESTIONS = [
         scene: 'q5_trojanhorse',
         question: 'HOW DID NOLAN ACTUALLY FILM THE TROJAN HORSE INTERIOR?',
         options: [
-            'CRAMMED IN WITH THE CAST AND AN IMAX CAMERA',
             'BUILT A TINY MODEL AND SHOT IT MACRO',
             'SHOT IT ON A GREEN-SCREEN VOLUME STAGE',
-            "CGI'D THE WHOLE INTERIOR IN POST"
+            "CGI'D THE WHOLE INTERIOR IN POST",
+            'CRAMMED IN WITH THE CAST AND AN IMAX CAMERA'
         ],
-        correct: 0,
-        fact: 'NOLAN CLIMBED INSIDE THE PRACTICAL 35-FOOT HORSE WITH THE CAST AND AN IMAX CAMERA TO SHOOT IT LIVE.'
+        correct: 3,
+        fact: 'NOLAN CRAMMED INSIDE THE REAL 35-FOOT HORSE WITH THE CAST AND AN IMAX CAMERA.'
     },
     {
         scene: 'q6_animatronic',
         question: 'FOR THE CYCLOPS\' CAVE, NOLAN BUILT A HUGE ANIMATRONIC CREATURE. HOW TALL WAS IT?',
-        options: ['15 FEET', '30 FEET', '60 FEET', '100 FEET'],
-        correct: 2,
+        options: ['100 FEET', '60 FEET', '30 FEET', '15 FEET'],
+        correct: 1,
         fact: 'THE PRACTICAL CYCLOPS ANIMATRONIC STOOD ROUGHLY 60 FEET TALL.'
     },
     {
         scene: 'q7_ancient',
         question: 'ABOUT HOW OLD IS HOMER\'S ORIGINAL "ODYSSEY" POEM?',
-        options: ['NEARLY 3,000 YEARS OLD', 'ABOUT 500 YEARS OLD', 'NEARLY 1,000 YEARS OLD', 'OVER 5,000 YEARS OLD'],
-        correct: 0,
+        options: ['ABOUT 500 YEARS OLD', 'NEARLY 1,000 YEARS OLD', 'NEARLY 3,000 YEARS OLD', 'OVER 5,000 YEARS OLD'],
+        correct: 2,
         fact: 'HOMER\'S "ODYSSEY" DATES TO ROUGHLY THE 8TH CENTURY BCE -- NEARLY 3,000 YEARS OLD.'
     }
 ];

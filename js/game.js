@@ -12,7 +12,7 @@ CY.Game = (function () {
     var timerStart = 0;
     var timerRunning = false;
     var lastTickSecond = -1;
-    var lastTime = 0;
+    var picked = null; // the room's locked-in answer for the current riddle
 
     var CRAWL = [
         'YOU ARE ODYSSEUS, KING OF ITHACA, BLOWN OFF COURSE SAILING HOME FROM TROY.',
@@ -45,20 +45,23 @@ CY.Game = (function () {
         return Math.max(0, CY.TIMER_SECONDS - elapsed);
     }
 
-    function reveal() {
+    // Lock in the room's guess (0-3), or null when nobody answered / time ran out.
+    // The game adjudicates immediately -- the host never has to score anything.
+    function pick(index) {
+        picked = index;
         state = 'REVEAL';
         timerRunning = false;
-        CY.Audio.confirm();
-    }
-
-    function judge(gotItRight) {
-        if (gotItRight) {
+        if (index !== null && index === q().correct) {
             escapeScore++;
             CY.Audio.correct();
         } else {
             CY.Audio.wrong();
         }
+    }
+
+    function nextRiddle() {
         riddleIndex++;
+        picked = null;
         if (riddleIndex >= CY.QUESTIONS.length) {
             goto('ENDING');
             if (escapeScore >= 6) CY.Audio.fanfare();
@@ -72,14 +75,16 @@ CY.Game = (function () {
     function restart() {
         riddleIndex = 0;
         escapeScore = 0;
+        picked = null;
         goto('TITLE');
     }
 
-    // action is 'ADVANCE' | 'UP' | 'DOWN' -- shared by the keyboard handler
-    // and the on-screen touch buttons so both drive identical logic.
+    // action is 'ADVANCE' | 'A' | 'B' | 'C' | 'D' -- shared by the keyboard
+    // handler and the on-screen touch buttons so both drive identical logic.
     function dispatch(action) {
         CY.Audio.unlock();
         var advance = action === 'ADVANCE';
+        var letterIndex = ['A', 'B', 'C', 'D'].indexOf(action);
 
         switch (state) {
             case 'TITLE':
@@ -103,11 +108,11 @@ CY.Game = (function () {
                 if (advance) { CY.Audio.select(); state = 'QUESTION'; startTimer(); }
                 break;
             case 'QUESTION':
-                if (advance) reveal();
+                if (letterIndex >= 0) pick(letterIndex);
+                else if (advance) pick(null); // nobody guessed / time ran out
                 break;
             case 'REVEAL':
-                if (action === 'UP') judge(true);
-                else if (action === 'DOWN') judge(false);
+                if (advance) nextRiddle();
                 break;
             case 'ENDING':
                 if (advance) restart();
@@ -117,10 +122,10 @@ CY.Game = (function () {
 
     function handleKey(e) {
         var k = e.key;
-        var action = (k === ' ' || k === 'Enter') ? 'ADVANCE'
-            : k === 'ArrowUp' ? 'UP'
-            : k === 'ArrowDown' ? 'DOWN'
-            : null;
+        var action = null;
+        if (k === ' ' || k === 'Enter') action = 'ADVANCE';
+        else if (/^[abcdABCD]$/.test(k)) action = k.toUpperCase();
+        else if (/^[1-4]$/.test(k)) action = ['A', 'B', 'C', 'D'][parseInt(k, 10) - 1];
         if (!action) return;
         e.preventDefault();
         dispatch(action);
@@ -199,13 +204,26 @@ CY.Game = (function () {
             updateTimerAudio();
             var cur = q();
             var isRevealed = state === 'REVEAL';
-            CY.UI.drawHUD(ctx, riddleIndex + 1, CY.QUESTIONS.length, escapeScore,
-                isRevealed ? 'UP = RIGHT   DOWN = WRONG' : 'SPACE = REVEAL');
+            var gotIt = picked !== null && picked === cur.correct;
 
-            drawArtPanel(t, 'scene_' + cur.scene, function () {
-                drawCaveBg(t);
-                CY.Art.drawSceneIcon(ctx, CY.WIDTH / 2, 74, cur.scene, t);
-            });
+            // Art first, HUD second -- the procedural fallbacks paint the whole
+            // canvas, so drawing the HUD before them would wipe it out.
+            if (isRevealed) {
+                // The reveal is the payoff beat: the Cyclops reacts to the answer.
+                var mood = gotIt ? 'pleased' : 'angry';
+                if (!CY.Images.draw(ctx, 'cyclops_' + mood, 90, 14, 140, 110)) {
+                    drawCaveBg(t);
+                    CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 18, 1.4, mood, t);
+                }
+            } else {
+                drawArtPanel(t, 'scene_' + cur.scene, function () {
+                    drawCaveBg(t);
+                    CY.Art.drawSceneIcon(ctx, CY.WIDTH / 2, 74, cur.scene, t);
+                });
+            }
+
+            CY.UI.drawHUD(ctx, riddleIndex + 1, CY.QUESTIONS.length, escapeScore,
+                isRevealed ? 'SPACE = NEXT' : 'PICK A B C D');
 
             var frac = isRevealed ? 0 : (timeLeftSeconds() / CY.TIMER_SECONDS);
             CY.UI.drawTimerBar(ctx, 4, 133, CY.WIDTH - 8, 5, frac);
@@ -213,14 +231,17 @@ CY.Game = (function () {
             CY.UI.drawPanel(ctx, 4, 139, CY.WIDTH - 8, 99);
 
             if (isRevealed) {
-                CY.drawTextBlock(ctx, cur.fact, 12, 147, 1, C.ink, CY.WIDTH - 24, 3);
+                var verdict = gotIt ? 'CORRECT!' : (picked === null ? 'NO ANSWER!' : 'WRONG!');
+                CY.drawText(ctx, verdict, 12, 144, 1, gotIt ? '#2c7a44' : C.red);
+                // Tight line spacing so even a 3-line fact clears the options at y=183.
+                CY.drawTextBlock(ctx, cur.fact, 12, 155, 1, C.ink, CY.WIDTH - 24, 2);
             } else {
                 CY.drawTextBlock(ctx, cur.question, 12, 147, 1, C.ink, CY.WIDTH - 24, 3);
             }
-            CY.UI.drawOptions(ctx, 12, 183, CY.WIDTH - 24, cur.options, cur.correct, isRevealed);
+            CY.UI.drawOptions(ctx, 12, 183, CY.WIDTH - 24, cur.options, cur.correct, isRevealed, picked);
 
             if (state === 'QUESTION' && timeLeftSeconds() <= 0) {
-                CY.UI.drawBlinkPrompt(ctx, "TIME'S UP! PRESS SPACE", CY.WIDTH / 2, 236, t, 1, C.red);
+                CY.UI.drawBlinkPrompt(ctx, "TIME'S UP! PICK OR PRESS SPACE", CY.WIDTH / 2, 236, t, 1, C.red);
             }
             return;
         }
@@ -244,7 +265,7 @@ CY.Game = (function () {
     }
 
     return {
-        // For on-screen touch controls: CY.Game.action('ADVANCE' | 'UP' | 'DOWN')
+        // For on-screen touch controls: CY.Game.action('ADVANCE' | 'A' | 'B' | 'C' | 'D')
         action: function (a) { dispatch(a); },
         init: function (canvasEl) {
             canvas = canvasEl;
