@@ -62,10 +62,10 @@ CY.QUESTIONS = [
         fact: 'THE PRACTICAL CYCLOPS ANIMATRONIC STOOD ROUGHLY 60 FEET TALL.'
     },
     {
-        scene: 'q7_nyongo',
-        question: 'LUPITA NYONG\'O PLAYS HELEN OF TROY AND WHICH OTHER LEGENDARY QUEEN?',
-        options: ['CIRCE', 'PENELOPE', 'CLYTEMNESTRA', 'HECUBA'],
-        correct: 2,
-        fact: 'NYONG\'O PULLS DOUBLE DUTY AS HELEN OF TROY AND QUEEN CLYTEMNESTRA.'
+        scene: 'q7_ancient',
+        question: 'ABOUT HOW OLD IS HOMER\'S ORIGINAL "ODYSSEY" POEM?',
+        options: ['NEARLY 3,000 YEARS OLD', 'ABOUT 500 YEARS OLD', 'NEARLY 1,000 YEARS OLD', 'OVER 5,000 YEARS OLD'],
+        correct: 0,
+        fact: 'HOMER\'S "ODYSSEY" DATES TO ROUGHLY THE 8TH CENTURY BCE -- NEARLY 3,000 YEARS OLD.'
     }
 ];

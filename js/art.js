@@ -295,14 +295,15 @@ CY.Art = {};
                 centered(ctx, rows6, P, cx, cy, 7);
                 break;
             }
-            case 'q7_nyongo': { // twin theatre masks
+            case 'q7_ancient': { // a nearly-3000-year-old rolled scroll
                 var rows7 = [
-                    'pp.....PP',
-                    'pwp...PwP',
-                    'pwwp.PwwP',
-                    'pwpwPPwwP',
-                    'p.wwww.wP',
-                    'pp....PPP'
+                    '.bbbbbb..',
+                    '.wwwwww..',
+                    '.wwwwww..',
+                    '.w.rr.w..',
+                    '.wwwwww..',
+                    '.wwwwww..',
+                    '.bbbbbb..'
                 ];
                 centered(ctx, rows7, P, cx, cy, 7);
                 break;

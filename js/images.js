@@ -7,7 +7,7 @@ CY.Images = (function () {
         'title', 'cave_backdrop',
         'cyclops_idle', 'cyclops_angry', 'cyclops_pleased', 'cyclops_laugh', 'cyclops_sleeping',
         'scene_q1_zeuslaw', 'scene_q2_telemachus', 'scene_q3_giants', 'scene_q4_imax',
-        'scene_q5_runtime', 'scene_q6_animatronic', 'scene_q7_nyongo',
+        'scene_q5_runtime', 'scene_q6_animatronic', 'scene_q7_ancient',
         'ending_great', 'ending_narrow', 'ending_caught'
     ];
     var store = {};
