@@ -5,11 +5,16 @@ var CY = CY || {};
 
 CY.QUESTIONS = [
     {
-        scene: 'q1_odysseus',
-        question: 'WHO PLAYS ODYSSEUS, THE KING OF ITHACA?',
-        options: ['MATT DAMON', 'CHRISTIAN BALE', 'CILLIAN MURPHY', 'LEONARDO DICAPRIO'],
+        scene: 'q1_zeuslaw',
+        question: 'WHAT ANCIENT GREEK CONCEPT DOES NOLAN DRAMATIZE AS "ZEUS\' LAW"?',
+        options: [
+            'XENIA -- SACRED HOSPITALITY TO STRANGERS',
+            'HUBRIS -- DANGEROUS PRIDE',
+            'OSTRACISM -- BANISHMENT BY VOTE',
+            "THE ORACLE'S PROPHECY"
+        ],
         correct: 0,
-        fact: 'MATT DAMON LEADS NOLAN\'S EPIC AS THE WANDERING KING HIMSELF.'
+        fact: '"ZEUS\' LAW" IS NOLAN\'S NAME FOR XENIA -- ANY STRANGER AT YOUR DOOR MIGHT SECRETLY BE A GOD.'
     },
     {
         scene: 'q2_telemachus',
@@ -19,11 +24,16 @@ CY.QUESTIONS = [
         fact: 'TOM HOLLAND PLAYS TELEMACHUS, WHO WAITS IN ITHACA WITH PENELOPE.'
     },
     {
-        scene: 'q3_athena',
-        question: 'ZENDAYA PLAYS WHICH GREEK GODDESS IN THE FILM?',
-        options: ['APHRODITE', 'HERA', 'ATHENA', 'ARTEMIS'],
-        correct: 2,
-        fact: 'ZENDAYA PLAYS ATHENA, GODDESS OF WISDOM AND ODYSSEUS\' PROTECTOR.'
+        scene: 'q3_practical',
+        question: 'HOW DID NOLAN BRING THE CYCLOPS TO LIFE ON SET?',
+        options: [
+            'A GIANT PRACTICAL PUPPET IN A REAL CAVE',
+            'FULLY CGI, ADDED IN POST-PRODUCTION',
+            'A MOTION-CAPTURE SUIT PERFORMER',
+            'FORCED-PERSPECTIVE CAMERA TRICKS ONLY'
+        ],
+        correct: 0,
+        fact: 'THE CYCLOPS WAS A GIANT PRACTICAL PUPPET, RIGGED AND OPERATED INSIDE A REAL CAVE IN GREECE.'
     },
     {
         scene: 'q4_imax',

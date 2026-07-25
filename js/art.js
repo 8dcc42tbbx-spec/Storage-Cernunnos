@@ -200,7 +200,7 @@ CY.Art = {};
         'M': '#5a5a5a',
         'e': C.monsterEye,
         'n': C.monsterPupil,
-        'skin': C.monsterSkin
+        'v': C.monsterSkin
     };
 
     function centered(ctx, rows, palette, cx, cy, cell) {
@@ -212,16 +212,16 @@ CY.Art = {};
         var bob = Math.sin(t / 500) * 2;
         cy += bob;
         switch (sceneId) {
-            case 'q1_odysseus': { // bronze war helmet + spear + shield
+            case 'q1_zeuslaw': { // a hooded stranger at the door -- maybe a god in disguise
                 var rows = [
-                    '...hhh...',
-                    '..hkkkh..',
-                    '.kkkkkkk.',
-                    'kkkkkkkkk',
-                    'kk.....kk',
-                    '.k.....k.',
-                    '..ksssk..',
-                    '...sss...'
+                    '....y....',
+                    '...yyy...',
+                    '..bbbbb..',
+                    '.bbbbbbb.',
+                    '.b.....b.',
+                    '.bbbbbbb.',
+                    '..bbbbb..',
+                    '.b.....b.'
                 ];
                 centered(ctx, rows, P, cx, cy, 7);
                 break;
@@ -240,16 +240,16 @@ CY.Art = {};
                 centered(ctx, rows2, P, cx, cy, 7);
                 break;
             }
-            case 'q3_athena': { // owl on a shield with a spear
+            case 'q3_practical': { // a puppet cyclops on a rig -- practical effects, not CGI
                 var rows3 = [
-                    '....s....',
-                    '..oOOo...',
-                    '.oOeOnO..',
-                    '..oOOo...',
-                    '...oo..s.',
-                    '.sssssss.',
-                    '.sMMMMMs.',
-                    '..sssss..'
+                    '.bbbbbbb.',
+                    '..s...s..',
+                    '..s...s..',
+                    '.vvvvvvv.',
+                    'vv.eee.vv',
+                    'vv..n..vv',
+                    '.vvvvvvv.',
+                    '..vv.vv..'
                 ];
                 centered(ctx, rows3, P, cx, cy, 7);
                 break;
