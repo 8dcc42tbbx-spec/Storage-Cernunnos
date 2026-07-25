@@ -113,7 +113,7 @@ Shared framing — paste this, then add the per-question line under it:
 
 - `assets/scene_q1_zeuslaw.png` — Add: A weary hooded traveler seen from behind, standing at a lit doorway at night, staff in hand — an ordinary beggar at the threshold. A faint, almost-imperceptible golden divine glow flickers at the edge of the hood, hinting this stranger might secretly be a god in disguise. Warm lamplight from the doorway against a cool dusk sky.
 - `assets/scene_q2_telemachus.png` — Add: A small gold laurel circlet resting beside a polished wooden hunting bow and a quiver of arrows, laid across a folded traveler's cloak on a windowsill overlooking a moonlit harbor — evoking a young prince waiting at home for his father's return.
-- `assets/scene_q3_practical.png` — Add: A giant one-eyed puppet head, rigged from above by thick rope and a wooden marionette control bar just visible at the top of frame, hanging inside a real, damp stone cave lit by work-lights rather than torches — deliberately showing the practical, hand-built craftsmanship (rivets, seams, rigging) rather than hiding it, like a proud behind-the-scenes reveal.
+- `assets/scene_q3_giants.png` — Add: A dramatic size-contrast still life evoking forced-perspective filmmaking — a massive raised club/weapon silhouette looming in the foreground at enormous scale, with a lone small warrior figure fleeing in the far background of the same shot, both lit by the same cold moonlight so they clearly share one world despite the scale gap. Forest treeline in silhouette behind them, sense of chaos and motion.
 - `assets/scene_q4_imax.png` — Add: A large stylized antique brass film camera on a wooden tripod, visible film reels catching warm light, a bright cone of golden light beaming from the lens like a spotlight cutting through cave darkness — half ancient artifact, half movie magic.
 - `assets/scene_q5_runtime.png` — Add: An ornate bronze-and-glass hourglass on a carved stone pedestal, fine sand caught mid-fall and faintly luminous, dramatic raking side-light casting long shadows across the floor.
 - `assets/scene_q6_animatronic.png` — Add: A colossal hulking mechanical cyclops framework looming in near-silhouette — visible rivets, gears, and a single glowing lens-eye — towering over a tiny human figure standing beside a marked wooden measuring pole for scale, scattered tools in the foreground.
@@ -154,5 +154,5 @@ Shared framing — paste this, then add the per-question line under it:
 - [ ] title.png (320×240)
 - [ ] cave_backdrop.png (320×240)
 - [ ] cyclops_idle.png / cyclops_angry.png / cyclops_pleased.png / cyclops_laugh.png / cyclops_sleeping.png (280×220)
-- [ ] scene_q1_zeuslaw.png / scene_q2_telemachus.png / scene_q3_practical.png / scene_q4_imax.png / scene_q5_runtime.png / scene_q6_animatronic.png / scene_q7_nyongo.png (312×118)
+- [ ] scene_q1_zeuslaw.png / scene_q2_telemachus.png / scene_q3_giants.png / scene_q4_imax.png / scene_q5_runtime.png / scene_q6_animatronic.png / scene_q7_nyongo.png (312×118)
 - [ ] ending_great.png / ending_narrow.png / ending_caught.png (320×240)

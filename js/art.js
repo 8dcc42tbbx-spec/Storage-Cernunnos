@@ -240,16 +240,16 @@ CY.Art = {};
                 centered(ctx, rows2, P, cx, cy, 7);
                 break;
             }
-            case 'q3_practical': { // a puppet cyclops on a rig -- practical effects, not CGI
+            case 'q3_giants': { // a giant's club looms over a tiny fleeing figure -- forced perspective
                 var rows3 = [
-                    '.bbbbbbb.',
-                    '..s...s..',
-                    '..s...s..',
-                    '.vvvvvvv.',
-                    'vv.eee.vv',
-                    'vv..n..vv',
-                    '.vvvvvvv.',
-                    '..vv.vv..'
+                    '.mmmmm...',
+                    'mmmmmmm..',
+                    '.mmmmm...',
+                    '..mmm....',
+                    '..mmm....',
+                    '..mmm...b',
+                    '..mmm..bb',
+                    '.......bb'
                 ];
                 centered(ctx, rows3, P, cx, cy, 7);
                 break;
