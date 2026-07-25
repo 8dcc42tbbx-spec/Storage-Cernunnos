@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TRAPPED! Odysseus vs the Cyclops</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             width: 100%;
-            height: 100%;
+            min-height: 100%;
             background: #000000;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -28,7 +29,7 @@
             image-rendering: crisp-edges;
             image-rendering: -moz-crisp-edges;
             max-width: 100vw;
-            max-height: 86vh;
+            max-height: 68vh;
             width: auto;
             height: auto;
             border: 2px solid #3a2a18;
@@ -55,6 +56,37 @@
             line-height: 1.6;
         }
         #legend b { color: #ffcc33; }
+        #legend .hint { color: #7a6a4e; font-size: 11px; }
+
+        /* On-screen host controls -- desktop uses the keyboard, but a
+           host running this from a tablet needs tappable buttons too. */
+        #controls {
+            width: 100%;
+            max-width: 420px;
+            padding: 6px 12px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .ctrl-row { display: flex; gap: 8px; }
+        .ctrl-btn {
+            font-family: monospace;
+            font-weight: bold;
+            letter-spacing: 1px;
+            font-size: 13px;
+            padding: 14px 8px;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            box-shadow: inset -3px -3px 0 rgba(0,0,0,0.35), inset 3px 3px 0 rgba(255,255,255,0.18);
+        }
+        .ctrl-btn:active { box-shadow: inset 2px 2px 0 rgba(0,0,0,0.35); transform: translateY(1px); }
+        .ctrl-advance { width: 100%; background: #7a5c3e; color: #f2e2b6; }
+        .ctrl-up { flex: 1; background: #2c7a44; color: #f6f2e6; }
+        .ctrl-down { flex: 1; background: #8a2a2a; color: #f6f2e6; }
     </style>
 </head>
 <body>
@@ -66,6 +98,14 @@
         HOST CONTROLS &mdash; <b>SPACE</b>: advance / reveal answer &nbsp;|&nbsp;
         <b>&uarr; UP</b>: room mostly got it right &nbsp;|&nbsp;
         <b>&darr; DOWN</b>: room mostly missed it
+        <div class="hint">(keyboard on desktop, or use the buttons below on a tablet/touch device)</div>
+    </div>
+    <div id="controls">
+        <button id="btnAdvance" class="ctrl-btn ctrl-advance" type="button">&#9654; ADVANCE / REVEAL</button>
+        <div class="ctrl-row">
+            <button id="btnUp" class="ctrl-btn ctrl-up" type="button">&#9650; ROOM GOT IT RIGHT</button>
+            <button id="btnDown" class="ctrl-btn ctrl-down" type="button">&#9660; ROOM MISSED IT</button>
+        </div>
     </div>
 
     <script src="js/constants.js"></script>
@@ -81,6 +121,10 @@
         window.addEventListener('load', function () {
             var canvas = document.getElementById('game');
             CY.Game.init(canvas);
+
+            document.getElementById('btnAdvance').addEventListener('click', function () { CY.Game.action('ADVANCE'); });
+            document.getElementById('btnUp').addEventListener('click', function () { CY.Game.action('UP'); });
+            document.getElementById('btnDown').addEventListener('click', function () { CY.Game.action('DOWN'); });
         });
     </script>
 </body>

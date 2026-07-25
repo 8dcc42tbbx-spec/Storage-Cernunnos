@@ -75,11 +75,11 @@ CY.Game = (function () {
         goto('TITLE');
     }
 
-    function handleKey(e) {
+    // action is 'ADVANCE' | 'UP' | 'DOWN' -- shared by the keyboard handler
+    // and the on-screen touch buttons so both drive identical logic.
+    function dispatch(action) {
         CY.Audio.unlock();
-        var k = e.key;
-        var advance = (k === ' ' || k === 'Enter');
-        if (advance) e.preventDefault();
+        var advance = action === 'ADVANCE';
 
         switch (state) {
             case 'TITLE':
@@ -106,13 +106,24 @@ CY.Game = (function () {
                 if (advance) reveal();
                 break;
             case 'REVEAL':
-                if (k === 'ArrowUp') judge(true);
-                else if (k === 'ArrowDown') judge(false);
+                if (action === 'UP') judge(true);
+                else if (action === 'DOWN') judge(false);
                 break;
             case 'ENDING':
                 if (advance) restart();
                 break;
         }
+    }
+
+    function handleKey(e) {
+        var k = e.key;
+        var action = (k === ' ' || k === 'Enter') ? 'ADVANCE'
+            : k === 'ArrowUp' ? 'UP'
+            : k === 'ArrowDown' ? 'DOWN'
+            : null;
+        if (!action) return;
+        e.preventDefault();
+        dispatch(action);
     }
 
     function updateTimerAudio() {
@@ -233,6 +244,8 @@ CY.Game = (function () {
     }
 
     return {
+        // For on-screen touch controls: CY.Game.action('ADVANCE' | 'UP' | 'DOWN')
+        action: function (a) { dispatch(a); },
         init: function (canvasEl) {
             canvas = canvasEl;
             ctx = canvas.getContext('2d');
