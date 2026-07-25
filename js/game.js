@@ -1,273 +1,244 @@
-// Postie Run - Main Game Loop & State Machine
-PR.Game = {
-    state: 0, // PR.CONST.STATE_MENU
-    canvas: null,
-    ctx: null,
-    lastTime: 0,
-    accumulator: 0,
-    TICK: 1000 / 60,
-    frameCount: 0,
+// State machine + main loop. The whole game is host-paced: one person runs
+// the keyboard while the room writes answers on paper, so every transition
+// waits for a keypress rather than a fixed timer (except the countdown bar,
+// which is advisory and never forces a transition on its own).
+var CY = CY || {};
+CY.Game = (function () {
+    var canvas, ctx;
+    var state = 'TITLE';
+    var pageIndex = 0;
+    var riddleIndex = 0; // 0-based into CY.QUESTIONS
+    var escapeScore = 0;
+    var timerStart = 0;
+    var timerRunning = false;
+    var lastTickSecond = -1;
+    var lastTime = 0;
 
-    init: function(canvas) {
-        this.canvas = canvas;
-        this.ctx = canvas.getContext('2d');
-        this.ctx.imageSmoothingEnabled = false;
+    var CRAWL = [
+        'YOU ARE ODYSSEUS, KING OF ITHACA, BLOWN OFF COURSE SAILING HOME FROM TROY.',
+        'YOUR SHIP TOOK SHELTER IN A SEASIDE CAVE -- THE LAIR OF THE CYCLOPS POLYPHEMUS.',
+        'HE HAS ROLLED A BOULDER ACROSS THE ENTRANCE. YOU AND YOUR CREW ARE TRAPPED.',
+        'BUT THE CYCLOPS IS STRANGELY OBSESSED WITH A NEW EPIC FROM THE MORTAL WORLD...'
+    ];
+    var CYCLOPS_INTRO = [
+        'HOO HOO! FRESH VISITORS! I AM POLYPHEMUS, SON OF POSEIDON!',
+        'I HEAR YOUR PEOPLE MADE A FILM OF YOUR LITTLE VOYAGE -- A CHRISTOPHER NOLAN PICTURE, NO LESS.',
+        'ANSWER MY SEVEN RIDDLES ABOUT "THE ODYSSEY" TRUTHFULLY, AND THE BOULDER MOVES ASIDE.',
+        'ANSWER POORLY... AND YOU PEEL MY POTATOES FOREVER. HA HA HA! BEGIN!'
+    ];
 
-        // Init subsystems
-        PR.Input.init();
-        PR.Particles.init();
-        PR.Level.init();
-        PR.HUD.init();
-        PR.Menu.init();
+    function q() { return CY.QUESTIONS[riddleIndex]; }
 
-        // Pre-render all sprites
-        PR.SpriteCache.init();
+    function goto(next) {
+        state = next;
+        pageIndex = 0;
+    }
 
-        // Init player
-        PR.Player.init();
+    function startTimer() {
+        timerStart = performance.now();
+        timerRunning = true;
+        lastTickSecond = -1;
+    }
 
-        // Start on title screen
-        this.state = PR.CONST.STATE_MENU;
-        PR.Menu.timer = 0;
+    function timeLeftSeconds() {
+        var elapsed = (performance.now() - timerStart) / 1000;
+        return Math.max(0, CY.TIMER_SECONDS - elapsed);
+    }
 
-        // Start loop
-        this.lastTime = performance.now();
-        this._loop = this._loop.bind(this);
-        requestAnimationFrame(this._loop);
-    },
+    function reveal() {
+        state = 'REVEAL';
+        timerRunning = false;
+        CY.Audio.confirm();
+    }
 
-    _loop: function(timestamp) {
-        var dt = timestamp - this.lastTime;
-        this.lastTime = timestamp;
-        this.accumulator += dt;
-
-        // Cap to prevent spiral of death
-        if (this.accumulator > 200) this.accumulator = 200;
-
-        // Fixed timestep updates
-        while (this.accumulator >= this.TICK) {
-            this._update();
-            this.accumulator -= this.TICK;
+    function judge(gotItRight) {
+        if (gotItRight) {
+            escapeScore++;
+            CY.Audio.correct();
+        } else {
+            CY.Audio.wrong();
         }
+        riddleIndex++;
+        if (riddleIndex >= CY.QUESTIONS.length) {
+            goto('ENDING');
+            if (escapeScore >= 6) CY.Audio.fanfare();
+            else if (escapeScore >= 3) CY.Audio.confirm();
+            else CY.Audio.sad();
+        } else {
+            goto('RIDDLE_INTRO');
+        }
+    }
 
-        this._render();
-        this.frameCount++;
-        requestAnimationFrame(this._loop);
-    },
+    function restart() {
+        riddleIndex = 0;
+        escapeScore = 0;
+        goto('TITLE');
+    }
 
-    _update: function() {
-        PR.Input.poll();
+    function handleKey(e) {
+        CY.Audio.unlock();
+        var k = e.key;
+        var advance = (k === ' ' || k === 'Enter');
+        if (advance) e.preventDefault();
 
-        switch (this.state) {
-            case PR.CONST.STATE_MENU:
-                var titleResult = PR.Menu.updateTitle();
-                if (titleResult === 'start') {
-                    PR.Audio.init();
-                    PR.Player.init();
-                    this._startLevel(0);
+        switch (state) {
+            case 'TITLE':
+                if (advance) { CY.Audio.select(); goto('CRAWL'); }
+                break;
+            case 'CRAWL':
+                if (advance) {
+                    CY.Audio.select();
+                    if (pageIndex < CRAWL.length - 1) pageIndex++;
+                    else { CY.Audio.roar(); goto('CYCLOPS_INTRO'); }
                 }
                 break;
-
-            case PR.CONST.STATE_LEVEL_INTRO:
-                var introResult = PR.Menu.updateLevelIntro();
-                if (introResult === 'play') {
-                    this.state = PR.CONST.STATE_PLAYING;
-                    PR.Audio.playMusic(PR.Level.data.theme);
+            case 'CYCLOPS_INTRO':
+                if (advance) {
+                    CY.Audio.select();
+                    if (pageIndex < CYCLOPS_INTRO.length - 1) pageIndex++;
+                    else goto('RIDDLE_INTRO');
                 }
                 break;
-
-            case PR.CONST.STATE_PLAYING:
-                // Pause
-                if (PR.Input.justPressed('pause')) {
-                    this.state = PR.CONST.STATE_PAUSED;
-                    PR.Audio.stopMusic();
-                    break;
-                }
-
-                // Update game
-                PR.Player.update();
-                PR.Enemies.update();
-                PR.Projectiles.update();
-                PR.Pickups.update();
-                PR.Particles.update();
-                PR.Level.update();
-                PR.Camera.update(PR.Player.x);
-                PR.HUD.update();
-
-                // Player-enemy collision
-                this._checkPlayerCollisions();
-
-                // Check delivery
-                if (PR.Level.deliveryReached) {
-                    this.state = PR.CONST.STATE_LEVEL_COMPLETE;
-                    PR.Menu.levelCompleteTimer = 0;
-                    PR.Audio.stopMusic();
-                    PR.Audio.play('level_complete');
-                    // Add time bonus
-                    var timeBonus = Math.max(0, 5000 - PR.Level.levelTimer * 2);
-                    PR.Player.score += timeBonus;
-                }
-
-                // Check death
-                if (PR.Player.state === 'dead' && PR.Player.deadTimer > 90) {
-                    if (PR.Player.lives <= 0) {
-                        this.state = PR.CONST.STATE_GAME_OVER;
-                        PR.Menu.gameOverTimer = 0;
-                        PR.Audio.stopMusic();
-                        PR.Audio.play('death');
-                    }
-                }
+            case 'RIDDLE_INTRO':
+                if (advance) { CY.Audio.select(); state = 'QUESTION'; startTimer(); }
                 break;
-
-            case PR.CONST.STATE_PAUSED:
-                if (PR.Input.justPressed('pause')) {
-                    this.state = PR.CONST.STATE_PLAYING;
-                    PR.Audio.playMusic(PR.Level.data.theme);
-                }
+            case 'QUESTION':
+                if (advance) reveal();
                 break;
-
-            case PR.CONST.STATE_LEVEL_COMPLETE:
-                var completeResult = PR.Menu.updateLevelComplete();
-                PR.Particles.update();
-                if (completeResult === 'next') {
-                    if (PR.Level.current >= 19) {
-                        // Game won!
-                        this.state = PR.CONST.STATE_LEVEL_COMPLETE;
-                        PR.Menu.levelCompleteTimer = 0;
-                        // Stay on win screen until they press start
-                        this._showWinScreen = true;
-                    } else {
-                        this._startLevel(PR.Level.current + 1);
-                    }
-                }
-                if (this._showWinScreen) {
-                    if (PR.Menu.levelCompleteTimer > 240 &&
-                        (PR.Input.justPressed('start') || PR.Input.justPressed('jump'))) {
-                        this._showWinScreen = false;
-                        this.state = PR.CONST.STATE_MENU;
-                        PR.Menu.timer = 0;
-                    }
-                }
+            case 'REVEAL':
+                if (k === 'ArrowUp') judge(true);
+                else if (k === 'ArrowDown') judge(false);
                 break;
-
-            case PR.CONST.STATE_GAME_OVER:
-                var overResult = PR.Menu.updateGameOver();
-                if (overResult === 'continue') {
-                    PR.Player.continues--;
-                    PR.Player.lives = PR.CONST.PLAYER_LIVES;
-                    PR.Player.respawn();
-                    this._startLevel(PR.Level.current);
-                } else if (overResult === 'title') {
-                    this.state = PR.CONST.STATE_MENU;
-                    PR.Menu.timer = 0;
-                }
+            case 'ENDING':
+                if (advance) restart();
                 break;
         }
-    },
+    }
 
-    _checkPlayerCollisions: function() {
-        if (PR.Player.state === 'dead' || PR.Player.invTimer > 0) return;
-        var pb = PR.Player.getBounds();
+    function updateTimerAudio() {
+        if (!timerRunning) return;
+        var left = timeLeftSeconds();
+        var sec = Math.ceil(left);
+        if (sec !== lastTickSecond) {
+            lastTickSecond = sec;
+            if (sec <= 5 && sec > 0) CY.Audio.tickUrgent();
+            else if (sec > 5) CY.Audio.tick();
+        }
+    }
 
-        for (var i = 0; i < PR.Enemies.list.length; i++) {
-            var e = PR.Enemies.list[i];
-            if (!e.alive || e.contactDamage <= 0) continue;
+    // ---------------------------------------------------------------- draw
+    function drawArtPanel(t, imageKey, fallback) {
+        if (!CY.Images.draw(ctx, imageKey, 4, 14, CY.WIDTH - 8, 118)) {
+            fallback();
+        }
+    }
 
-            var eb = e.getBounds();
-            if (PR.Utils.aabb(pb, eb)) {
-                if (PR.Player.inVehicle) {
-                    // eDV runs over enemies
-                    e.takeDamage(5, false);
-                    PR.Camera.shake(2, 6);
-                } else if (e.canBeStomped && PR.Player.vy > 0 && PR.Player.y + PR.Player.h < e.y + e.h / 2) {
-                    // Stomp!
-                    e.takeDamage(2, false);
-                    PR.Player.vy = -4;
-                    PR.Player.addScore(e.scoreValue);
-                } else {
-                    PR.Player.takeDamage(e.contactDamage);
-                }
+    function drawCaveBg(t) {
+        if (!CY.Images.draw(ctx, 'cave_backdrop', 0, 0, CY.WIDTH, CY.HEIGHT)) {
+            CY.Art.drawCaveBackdrop(ctx, t);
+        }
+    }
+
+    function draw(t) {
+        var C = CY.COLORS;
+
+        if (state === 'TITLE') {
+            if (!CY.Images.draw(ctx, 'title', 0, 0, CY.WIDTH, CY.HEIGHT)) {
+                CY.Art.drawTitle(ctx, t);
             }
+            CY.UI.drawCentered(ctx, 'TRAPPED!', CY.WIDTH / 2, 150, 3, C.gold);
+            CY.UI.drawCentered(ctx, 'ODYSSEUS VS THE CYCLOPS', CY.WIDTH / 2, 180, 1, C.white);
+            CY.UI.drawCentered(ctx, 'A TRIVIA ESCAPE', CY.WIDTH / 2, 194, 1, C.parchmentDark);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE TO BEGIN', CY.WIDTH / 2, 218, t, 1, C.white);
+            return;
         }
-    },
 
-    _startLevel: function(levelIndex) {
-        PR.Level.load(levelIndex);
-        PR.Menu.levelIntroTimer = 0;
-        this.state = PR.CONST.STATE_LEVEL_INTRO;
-        PR.Audio.stopMusic();
-        this._showWinScreen = false;
-    },
-
-    _render: function() {
-        var ctx = this.ctx;
-
-        // Clear
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, PR.CONST.CANVAS_W, PR.CONST.CANVAS_H);
-
-        switch (this.state) {
-            case PR.CONST.STATE_MENU:
-                PR.Menu.renderTitle(ctx);
-                break;
-
-            case PR.CONST.STATE_LEVEL_INTRO:
-                this._renderGame(ctx);
-                PR.Menu.renderLevelIntro(ctx);
-                break;
-
-            case PR.CONST.STATE_PLAYING:
-                this._renderGame(ctx);
-                PR.HUD.render(ctx);
-                break;
-
-            case PR.CONST.STATE_PAUSED:
-                this._renderGame(ctx);
-                PR.HUD.render(ctx);
-                PR.Menu.renderPause(ctx);
-                break;
-
-            case PR.CONST.STATE_LEVEL_COMPLETE:
-                this._renderGame(ctx);
-                if (this._showWinScreen) {
-                    PR.Menu.renderWin(ctx);
-                } else {
-                    PR.Menu.renderLevelComplete(ctx);
-                }
-                break;
-
-            case PR.CONST.STATE_GAME_OVER:
-                this._renderGame(ctx);
-                PR.Menu.renderGameOver(ctx);
-                break;
+        if (state === 'CRAWL') {
+            drawCaveBg(t);
+            CY.Art.drawTorch(ctx, 20, 60, t);
+            CY.Art.drawTorch(ctx, CY.WIDTH - 20, 60, t);
+            CY.UI.drawDialogue(ctx, 20, 150, CY.WIDTH - 40, 74, CRAWL[pageIndex], 1);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 232, t, 1, C.parchment);
+            CY.UI.drawCentered(ctx, (pageIndex + 1) + '/' + CRAWL.length, CY.WIDTH - 30, 158, 1, C.caveHi);
+            return;
         }
-    },
 
-    _renderGame: function(ctx) {
-        // Apply camera transform
-        PR.Camera.apply(ctx);
+        if (state === 'CYCLOPS_INTRO') {
+            drawCaveBg(t);
+            var mood = pageIndex === CYCLOPS_INTRO.length - 1 ? 'laugh' : 'idle';
+            if (!CY.Images.draw(ctx, 'cyclops_' + mood, 90, 10, 140, 110)) {
+                CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 20, 1.6, mood, t);
+            }
+            CY.UI.drawDialogue(ctx, 20, 150, CY.WIDTH - 40, 74, CYCLOPS_INTRO[pageIndex], 1);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 232, t, 1, C.parchment);
+            return;
+        }
 
-        // Background & tilemap
-        PR.Level.render(ctx);
+        if (state === 'RIDDLE_INTRO') {
+            drawCaveBg(t);
+            if (!CY.Images.draw(ctx, 'cyclops_idle', 90, 30, 140, 110)) {
+                CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 40, 1.6, 'idle', t);
+            }
+            CY.UI.drawCentered(ctx, 'RIDDLE ' + (riddleIndex + 1) + ' OF ' + CY.QUESTIONS.length, CY.WIDTH / 2, 190, 2, C.gold);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 218, t, 1, C.white);
+            return;
+        }
 
-        // Pickups
-        PR.Pickups.render(ctx);
+        if (state === 'QUESTION' || state === 'REVEAL') {
+            updateTimerAudio();
+            var cur = q();
+            var isRevealed = state === 'REVEAL';
+            CY.UI.drawHUD(ctx, riddleIndex + 1, CY.QUESTIONS.length, escapeScore,
+                isRevealed ? 'UP = RIGHT   DOWN = WRONG' : 'SPACE = REVEAL');
 
-        // Enemies
-        PR.Enemies.render(ctx);
+            drawArtPanel(t, 'scene_' + cur.scene, function () {
+                drawCaveBg(t);
+                CY.Art.drawSceneIcon(ctx, CY.WIDTH / 2, 74, cur.scene, t);
+            });
 
-        // Player
-        PR.Player.render(ctx);
+            var frac = isRevealed ? 0 : (timeLeftSeconds() / CY.TIMER_SECONDS);
+            CY.UI.drawTimerBar(ctx, 4, 133, CY.WIDTH - 8, 5, frac);
 
-        // Projectiles
-        PR.Projectiles.render(ctx);
+            CY.UI.drawPanel(ctx, 4, 139, CY.WIDTH - 8, 99);
 
-        // Particles (on top)
-        PR.Particles.render(ctx);
+            if (isRevealed) {
+                CY.drawTextBlock(ctx, cur.fact, 12, 147, 1, C.ink, CY.WIDTH - 24, 3);
+            } else {
+                CY.drawTextBlock(ctx, cur.question, 12, 147, 1, C.ink, CY.WIDTH - 24, 3);
+            }
+            CY.UI.drawOptions(ctx, 12, 183, CY.WIDTH - 24, cur.options, cur.correct, isRevealed);
 
-        // Restore camera
-        PR.Camera.restore(ctx);
-    },
+            if (state === 'QUESTION' && timeLeftSeconds() <= 0) {
+                CY.UI.drawBlinkPrompt(ctx, "TIME'S UP! PRESS SPACE", CY.WIDTH / 2, 236, t, 1, C.red);
+            }
+            return;
+        }
 
-    _showWinScreen: false
-};
+        if (state === 'ENDING') {
+            var tier = escapeScore >= 6 ? 'great' : (escapeScore >= 3 ? 'narrow' : 'caught');
+            var drawFn = { great: CY.Art.drawEndingGreat, narrow: CY.Art.drawEndingNarrow, caught: CY.Art.drawEndingCaught }[tier];
+            if (!CY.Images.draw(ctx, 'ending_' + tier, 0, 0, CY.WIDTH, CY.HEIGHT)) {
+                drawFn(ctx, t);
+            }
+            CY.UI.drawCentered(ctx, 'FINAL SCORE: ' + escapeScore + ' / ' + CY.QUESTIONS.length, CY.WIDTH / 2, 222, 1, C.parchment);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE TO PLAY AGAIN', CY.WIDTH / 2, 232, t, 1, C.white);
+            return;
+        }
+    }
+
+    function loop(t) {
+        ctx.imageSmoothingEnabled = false;
+        draw(t);
+        requestAnimationFrame(loop);
+    }
+
+    return {
+        init: function (canvasEl) {
+            canvas = canvasEl;
+            ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            window.addEventListener('keydown', handleKey);
+            requestAnimationFrame(loop);
+        }
+    };
+})();

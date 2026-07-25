@@ -1,190 +1,107 @@
-# Gemini Art Prompts for Postie Run
+# Gemini art prompts — TRAPPED! Odysseus vs the Cyclops
 
-Use these prompts with Google Gemini (or Imagen) to generate replacement sprite assets for the programmatic pixel art in Postie Run. Each prompt targets a specific sprite sheet. All assets should be generated at the specified pixel dimensions with transparent backgrounds.
+The game runs today on procedural (code-drawn) pixel art, so nothing here is
+required to play. Generate any or all of these with Gemini to upgrade the
+look; drop the result in `assets/` under the exact filename listed and the
+game will automatically use it instead of the built-in drawing (see
+`js/images.js`). Nothing needs to be wired up — it's a drop-in swap.
 
----
+## Before you generate anything: read this
 
-## Style Guide (Include with every prompt)
+**Style anchor** — prepend this block to every prompt below so all the
+generated pieces feel like one game:
 
-> **Art style reference**: Metal Slug (SNK, 1996) pixel art. Bubbly, exaggerated proportions — big heads (about 1/3 of character height), short stubby bodies, small legs. Thick 1-2 pixel black outlines on all characters. Bright, saturated colors with cel-shading style highlights. Early-to-mid 1990s arcade aesthetic. 16-bit era pixel art. Transparent background (PNG). No anti-aliasing — hard pixel edges only.
+> Retro 8-bit / 16-bit video game pixel art, in the style of a late-1980s to
+> early-1990s console adventure game (think Zelda II, Golden Axe, King's
+> Quest, Willow). Hard-edged pixels, no anti-aliasing, no blur, no
+> gradients — flat shaded color blocks only, like a hand-placed sprite.
+> Limited, warm, torch-lit palette: cave browns (#241812, #4a3728, #7a5c3e,
+> #a4805a), parchment cream (#f2e2b6), ink brown-black (#1a1008), gold
+> (#ffcc33), fire orange (#ff7733), blood red (#c22a2a), moss green
+> (#3fa35c), indigo night sky (#141033), pale moonlight (#f2ecd0), teal sea
+> (#1f6f8b), and mossy monster-skin olive (#5c6b34). No modern UI, no text
+> unless specified, no photorealism.
 
----
+**Resize after you download.** Gemini will hand back a much larger image
+than the game needs. Downscale it to the *exact* pixel dimensions listed
+per asset using **nearest-neighbor / point resampling** (not bicubic —
+that reintroduces the blur we just avoided). In most editors this is a
+"pixelate" or "nearest neighbor" resize option. That step is what makes it
+read as 8-bit instead of a shrunk photo.
 
-## Prompt 1: Ernie the Postie (Player Character Sprite Sheet)
+**No real likenesses.** These prompts describe symbolic/mythic imagery
+(a helmet, a masked figure, an owl-on-a-shield) rather than portraits of
+the real film's cast — keep it that way when you generate, both to match
+the game's style and to avoid depicting real people.
 
-Generate a pixel art sprite sheet for a video game character. The character is "Ernie", an Australian postman (postie) in the style of Metal Slug arcade game characters.
-
-**Character description**: Male postie wearing an Australia Post uniform — bright red polo shirt with a yellow hi-vis stripe across the chest, navy blue shorts, red cap with white Australia Post logo, brown leather satchel bag slung across his body, black work boots. Light skin, short brown hair visible under the cap. Bubbly Metal Slug proportions — big round head (1/3 of height), stubby body, short legs.
-
-**Sprite sheet layout** (16x24 pixels per frame, arranged in rows):
-- Row 1: Idle (2 frames — subtle breathing animation)
-- Row 2: Run cycle (4 frames — exaggerated bouncy run)
-- Row 3: Jump ascending (1 frame), Jump descending/falling (1 frame)
-- Row 4: Shooting (1 frame — arm extended forward throwing a parcel), Shooting while crouching (1 frame)
-- Row 5: Crouching/ducking (1 frame)
-- Row 6: Taking damage/hurt (1 frame — knocked back expression)
-- Row 7: Death animation (3 frames — comical collapse, Metal Slug style)
-
-**Color palette**: Red (#CC2200), Yellow hi-vis (#FFD700), Skin (#F5C6A0), Navy pants (#1A1A5A), Brown satchel (#8B4513), Black boots (#2A2A2A), White (#FFFFFF), Black outline (#000000)
-
-**Output**: Single PNG sprite sheet, 128x192 pixels (8 columns x 8 rows of 16x24 frames), transparent background.
-
----
-
-## Prompt 2: eDV Electric Delivery Vehicle
-
-Generate a pixel art sprite of an Australia Post electric delivery vehicle (eDV) for a Metal Slug-style arcade game.
-
-**Vehicle description**: Small red and white electric delivery van, resembling a miniaturised Australia Post delivery vehicle. Rounded, bubbly shape like a Metal Slug tank. Red body (#CC2200) with white panels (#F0F0F0). Australia Post yellow stripe. Small windshield (#AADDFF). Chunky black wheels with grey hubcaps. The vehicle should look like a cute, cartoonish version of a real eDV.
-
-**Two versions**:
-1. Empty vehicle (32x20 pixels) — no driver visible
-2. Manned vehicle (32x20 pixels) — Ernie visible in the cab wearing his red cap, waving
-
-**Output**: Single PNG, 64x20 pixels (2 frames side by side), transparent background.
+Save everything into `assets/` (create the folder if it doesn't exist).
 
 ---
 
-## Prompt 3: Enemy Sprite Sheets
+## 1. Title screen — `assets/title.png`
+**Size:** 320×240 (4:3)
 
-Generate pixel art enemy sprites for a Metal Slug-style Australian postie arcade game. All enemies should have exaggerated, cartoony Metal Slug proportions and thick black outlines.
+> A moonlit rocky sea cave mouth seen from inside looking out, cave walls
+> framing the shot on both sides, a calm dark teal sea and a low pale moon
+> visible through the opening. A colossal one-eyed cyclops silhouette looms
+> just outside the cave mouth in the far background, mostly in black
+> silhouette with one glowing yellow eye. Scattered pixel stars in the sky.
+> No text, no characters in the foreground — this is a background plate for
+> a title logo to be overlaid separately.
 
-### 3A: Angry Dog (16x12 pixels, 2 run frames)
-Brown medium-sized dog (could be a cattle dog mix), angry expression with bared teeth, running on all fours. Exaggerated big head, small body. Looks aggressive but cartoonish.
+## 2. Cave backdrop — `assets/cave_backdrop.png`
+**Size:** 320×240 (4:3)
 
-### 3B: Swooping Magpie (16x12 pixels, 2 flap frames + 1 swoop/dive frame)
-Australian magpie — black and white plumage, sharp yellow beak. Two frames of level flight (wings up/down), one frame of aggressive downward swoop with beak pointed at player. Classic Aussie magpie terror.
+> Interior of a torch-lit sea cave, used repeatedly as a dialogue-scene
+> background. Rough stone walls and stalactites along the top edge, two
+> flickering torches mounted on the walls left and right throwing warm
+> orange light, a glimpse of starry night sky and a sliver of moon through
+> a distant opening at upper right. Empty of characters — this is a
+> background plate.
 
-### 3C: Amazon Delivery Van (48x28 pixels, 1 frame)
-Dark blue delivery van with the Amazon smile/arrow logo in orange on the side. Menacing front grille, bright headlights. Chunky wheels. Should look like an oversized threat barrelling toward the player.
+## 3–7. Cyclops portraits (five moods)
+**Size:** 280×220 each, transparent or cave-dark background
 
-### 3D: Angry Person (14x24 pixels, 2 frames)
-Angry suburban resident in casual clothes, waving a red-and-white "Sorry We Missed You" card. Two frames alternating the card-waving animation. Furious expression. Metal Slug civilian proportions.
+Use this shared description, swapping only the `{MOOD}` line:
 
-### 3E: Wheelie Bin (12x16 pixels, 1 frame)
-Standard Australian green wheelie bin with yellow lid. Simple but recognisable. Slight anthropomorphic menace optional.
+> A single friendly-menacing cyclops character portrait, head and shoulders,
+> facing forward. Mossy olive-green craggy skin, one huge round yellow eye
+> centered on the forehead with a black pupil, a wide mouth, small blunt
+> tusks. Cartoonish and expressive rather than gory or realistic — this is
+> a comic party-game villain, not a horror creature.
 
-### 3F: Lawn Mower (20x14 pixels, 1 frame)
-Red ride-on lawn mower, unmanned, looking dangerous. Spinning blade effect on front. Exhaust smoke puff.
+- `assets/cyclops_idle.png` — {MOOD}: neutral, eyebrow relaxed, mouth in a flat curious line, waiting for an answer.
+- `assets/cyclops_angry.png` — {MOOD}: furious, eyebrow slanted hard down over the eye, mouth wide open baring blunt teeth, steam-lines optional.
+- `assets/cyclops_pleased.png` — {MOOD}: smug and satisfied, eye squinted half-shut like a happy cat, faint closed-mouth smile.
+- `assets/cyclops_laugh.png` — {MOOD}: cackling with delight, head tipped back, mouth wide open laughing, eye scrunched shut.
+- `assets/cyclops_sleeping.png` — {MOOD}: fast asleep, eye fully closed as a single horizontal line, mouth slightly open, maybe a small "Z" pixel shape drifting above its head.
 
-### 3G: Cat on Fence (12x14 pixels, 2 frames — sitting, swiping)
-Orange tabby cat sitting on a fence, then swiping with paw extended. Green eyes, angry expression. Classic suburban menace.
+## 8–14. Riddle scene banners (one per question)
+**Size:** 312×118 each (wide banner)
 
-### 3H: Emu (20x24 pixels, 2 run frames)
-Large Australian emu running with long legs. Brown feathered body, long neck, beady eyes. Looks like it could win another Emu War. Metal Slug big-head style.
+Shared framing note: *wide banner illustration, symbolic/iconic objects
+centered on a simple cave-stone backdrop, no readable text in the image.*
 
-### 3I: Drop Bear (14x14 pixels, 1 frame)
-Mythical Australian drop bear — grey koala-like creature with red eyes, sharp teeth, and claws. Menacing but cute. Falling pose with arms spread.
+- `assets/scene_q1_odysseus.png` — A bronze Greek war helmet with a horsehair crest, resting beside a round bronze shield and a spear, on weathered ship planking. (Question: who plays Odysseus.)
+- `assets/scene_q2_telemachus.png` — A small gold circlet crown resting next to a wooden bow and quiver of arrows, evoking a young prince waiting at home. (Question: who plays Telemachus.)
+- `assets/scene_q3_athena.png` — A wise owl perched atop a bronze shield and spear, an olive branch draped across the shield, moonlight glow. (Question: who plays Athena.)
+- `assets/scene_q4_imax.png` — A giant stylized antique film camera with visible film reels, glowing warm light beaming from the lens like a spotlight. (Question: the IMAX filming first.)
+- `assets/scene_q5_runtime.png` — A large ornate hourglass with sand mid-fall, sitting on a stone pedestal. (Question: the film's runtime.)
+- `assets/scene_q6_animatronic.png` — A massive hulking mechanical/animatronic cyclops framework (visible rivets and joints) towering over a tiny human figure standing next to a measuring pole for scale. (Question: height of the practical cyclops build.)
+- `assets/scene_q7_nyongo.png` — Two ornate theatrical masks side by side — one regal and serene (a queen), one fierce and vengeful (another queen) — both gold-trimmed, on a dark backdrop. (Question: the actress's dual role.)
 
-### 3J: Road Train (64x24 pixels, 1 frame)
-Massive outback road train — truck cab pulling two trailers. Rust red/orange cab, grey trailers, huge bull bar on front. Multiple wheels. Should look intimidatingly large.
+## 15–17. Ending scenes
+**Size:** 320×240 each
 
-### 3K: BOSS: Giant Rottweiler (48x40 pixels, 2 frames)
-Enormous rottweiler — black and tan coloring, spiked collar, glowing red eyes, bared teeth with drool. Two frames: standing menacingly, and mid-charge/lunge. Should be at least 3x the size of the player. Pure intimidation. Metal Slug boss energy.
-
-### 3L: Chihuahua (10x8 pixels, 2 run frames)
-Tiny tan chihuahua, disproportionately large head with huge eyes, trembling with rage. Comically small but aggressive. Boss summon minion.
-
-**Output**: Each enemy as a separate PNG sprite sheet with all frames arranged horizontally, transparent backgrounds.
-
----
-
-## Prompt 4: Projectile & Pickup Sprites
-
-Generate pixel art items and projectiles for a Metal Slug-style postie game.
-
-### Projectiles (transparent background):
-- **Parcel** (8x6 px): Brown cardboard box with packing tape stripe. The classic Australia Post parcel.
-- **Cannon Parcel** (6x5 px): Smaller, faster parcel with a yellow speed trail.
-- **Letter** (5x3 px): White envelope with blue stamp in corner.
-- **Ninja Stamp** (10x10 px, 4 rotation frames): Red rubber stamp shaped like a shuriken star. White cross/kanji pattern. "DELIVERED" text visible when not spinning. Spins through the air like a throwing star. 4 frames at 0°, 90°, 180°, 270° rotation.
-- **"DELIVERED" Stamp Mark** (14x8 px): Red ink stamp impression reading "DELIVERED!" — appears on enemies hit by the Ninja Stamp.
-- **Sorry We Missed You Card** (8x6 px): Enemy projectile — white card with red header stripe.
-
-### Pickups (transparent background, 12x10 px each):
-- **Cannon Pickup**: Gold box with "C" marking
-- **Spray Pickup**: Blue box with "S" marking
-- **Stamp Pickup**: Red box with star/shuriken marking
-- **Health Pickup**: White box with red cross
-- **eDV Pickup**: Gold box with small red vehicle silhouette
-
-**Output**: Single PNG with all items arranged in a grid, transparent background.
+- `assets/ending_great.png` — Triumphant: a wide-open cave mouth at night with the boulder rolled away, a small flock of sheep walking out freely toward moonlit water, one figure barely visible clinging to the underside of a sheep's belly. Warm, victorious mood, bright moon, open sky.
+- `assets/ending_narrow.png` — Tense but hopeful: inside the cave, the huge cyclops asleep and snoring beside a toppled wine cup, a few small figures creeping past on tiptoe near the cave mouth, dim torchlight, mostly shadows.
+- `assets/ending_caught.png` — Comic, not grim: the cyclops sitting cross-legged and laughing next to a big cooking pot full of potatoes, a tiny apron and pile of unpeeled potatoes nearby — a silly "chore punishment" ending, not violent or scary.
 
 ---
 
-## Prompt 5: Background Tilesets (5 themes)
-
-Generate pixel art tileset backgrounds for a Metal Slug-style side-scrolling game set in Australia. Each theme needs parallax layers.
-
-### 5A: Suburban (Levels 1-4)
-Quiet Australian suburban street. Weatherboard houses with corrugated iron roofs, white picket fences, green lawns, gum trees (eucalyptus), letterboxes, garden beds. Blue sky with fluffy clouds. Warm, inviting colors. Two parallax layers: far houses (muted) and near houses/fences (detailed).
-
-### 5B: Urban (Levels 5-8)
-Australian city street. Multi-story buildings, shop awnings, apartment blocks with balconies, traffic lights, power lines, parked cars. Concrete and asphalt tones. More grey and steel, but still the bright Metal Slug palette. Office buildings with lit windows.
-
-### 5C: Regional Town (Levels 9-12)
-Country Australian town. Wide main street, pub with verandah, grain silos in background, wide open sky, windmills, ute trucks, gum trees. Earthy greens and browns. Countryside feel with distant hills.
-
-### 5D: Coastal Town (Levels 13-16)
-Australian beach town. Sandy ground, Norfolk pines/palm trees, surf club, pastel-colored beach houses, boardwalk planks, ocean visible in background. Bright blues and sandy yellows. Relaxed but colorful.
-
-### 5E: Outback (Levels 17-20)
-Red Centre Australian outback. Red/orange dirt ground, sparse dead trees, distant red rock formations (Uluru-esque silhouette in far background), massive blue sky, dust in the air, heat shimmer. Rust reds, burnt oranges, deep blue sky. Dramatic and sparse.
-
-**For each theme provide**:
-- Ground tile (16x16 px) — surface and sub-surface
-- Sky gradient colors (top and bottom)
-- Far parallax layer — buildings/landscape silhouettes (256x64 px repeating)
-- Near parallax layer — detailed buildings/objects (256x96 px repeating)
-
-**Output**: 5 separate PNG files, one per theme.
-
----
-
-## Prompt 6: UI Elements
-
-### Title Logo
-"POSTIE RUN" in bold, chunky pixel art lettering. Red and yellow color scheme matching Australia Post branding. Metal Slug-style arcade game logo with slight 3D beveled effect. 160x40 pixels.
-
-### Delivery Targets
-- **House** (32x32 px): Typical Australian suburban house — brick/weatherboard walls, pitched roof, front door, windows, small front yard, red Australia Post mailbox at the front.
-- **Parcel Locker** (24x32 px): Red Australia Post parcel locker unit with multiple compartment doors, each with a small keyhole. Yellow stripe and logo at top.
-
-### HUD Icons
-- **Postie Hat** (8x6 px): Small red Australia Post cap icon for lives display
-- **Heart** (8x8 px): Health icon
-- **Arrow/marker** (8x8 px): Delivery direction indicator
-
----
-
-## Prompt 7: Explosion & Effect Sprites
-
-Generate pixel art explosion and effect animations for a Metal Slug-style game.
-
-### Explosion (4 frames, sizes 8px, 14px, 20px, 26px diameter)
-Metal Slug-style explosion sequence. Frame 1: Small white flash. Frame 2: Expanding orange/yellow fireball. Frame 3: Larger fireball with smoke edges. Frame 4: Dissipating smoke puffs. Bright saturated colors: white center (#FFFFFF), yellow (#FFCC00), orange (#FF6600), red (#FF2200), grey smoke (#888888).
-
-### Dust Puff (3 frames, 8x8 px each)
-Small tan/brown dust cloud for landing and running. Grows and fades.
-
-### Water Splash (3 frames, 8x8 px each)
-Blue water droplets arcing upward then falling. For sprinkler/hose effects.
-
-### Muzzle Flash (2 frames, 6x6 px)
-Small yellow-white flash at the shooting point.
-
-**Output**: Single PNG sprite sheet with all effect frames, transparent background.
-
----
-
-## Usage Notes
-
-1. **Resolution**: The game runs at 320x240 pixels scaled 3x. All sprites should be at the exact pixel dimensions specified — they will appear chunky and retro at display size.
-
-2. **Transparency**: All sprites MUST have transparent backgrounds (PNG-24 with alpha).
-
-3. **Outline**: Every character/object sprite should have a 1px black (#000000) outline for that authentic Metal Slug look.
-
-4. **Integration**: To use generated sprites in the game, they would replace the programmatic canvas-drawn sprites in `sprites.js`, `sprites-enemies.js`, `sprites-effects.js`, and `sprites-env.js`. Each sprite would be loaded as an Image element and drawn via `ctx.drawImage()` instead of the current pixel-map approach.
-
-5. **Color consistency**: Stick to the palette defined in `js/constants.js` under `PR.CONST.COL` for character and enemy colors to maintain visual consistency.
+### Quick checklist
+- [ ] title.png (320×240)
+- [ ] cave_backdrop.png (320×240)
+- [ ] cyclops_idle.png / cyclops_angry.png / cyclops_pleased.png / cyclops_laugh.png / cyclops_sleeping.png (280×220)
+- [ ] scene_q1_odysseus.png … scene_q7_nyongo.png (312×118)
+- [ ] ending_great.png / ending_narrow.png / ending_caught.png (320×240)
