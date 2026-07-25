@@ -256,6 +256,19 @@ CY.Audio = (function () {
         MUSIC.title = { bpm: 84, len: 32, loop: true, notes: n };
     })();
 
+    // QUESTION -- tension bed under the answer window. Deliberately almost
+    // featureless: a low drone, a heartbeat pulse and a sparse tick. It has to
+    // sit far enough back that the host can talk straight over it, so nothing
+    // here carries a melody that would compete for attention.
+    (function () {
+        var n = [];
+        seq(n, 0, 7.6, 'pad', ['D2', 'A2'], 0.18);
+        seq(n, 0, 7.6, 'pad', ['D3'], 0.10);
+        beatline(n, 0, 2, 4, 'kick', 0.30);       // slow heartbeat
+        run(n, 1, 2, 'pluck', ['A4', 'A4', 'A4', 'A4'], 0.10, 0.3);
+        MUSIC.question = { bpm: 96, len: 8, loop: true, notes: n };
+    })();
+
     // ENDING: GREAT ESCAPE -- triumphant Genesis-style fanfare.
     // Shifts to D major, the tonal payoff after a whole game in the modal world.
     (function () {

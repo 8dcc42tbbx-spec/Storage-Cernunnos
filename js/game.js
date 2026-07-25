@@ -12,7 +12,9 @@ CY.Game = (function () {
     var timerStart = 0;
     var timerRunning = false;
     var lastTickSecond = -1;
-    var picked = null; // the room's locked-in answer for the current riddle
+    var picked = null;       // the room's locked-in answer for the current riddle
+    var lastResult = null;   // 'correct' | 'wrong' | 'none' -- drives the taunt
+    var taunt = '';          // chosen once per round, never inside draw()
 
     var CRAWL = [
         'YOU ARE ODYSSEUS, KING OF ITHACA, BLOWN OFF COURSE SAILING HOME FROM TROY.',
@@ -55,14 +57,24 @@ CY.Game = (function () {
         picked = index;
         state = 'REVEAL';
         timerRunning = false;
+        CY.Audio.stopMusic(); // drop the tension bed so the verdict lands clean
         if (index !== null && index === q().correct) {
+            lastResult = 'correct';
             escapeScore++;
             CY.Audio.correct();
             CY.Audio.cyclopsPleased();
         } else {
+            lastResult = index === null ? 'none' : 'wrong';
             CY.Audio.wrong();
             CY.Audio.cyclopsAngry();
         }
+    }
+
+    // Single entry point into the between-riddle beat, so the taunt is chosen
+    // exactly once per round rather than re-rolled every animation frame.
+    function enterRiddleIntro() {
+        taunt = CY.pickTaunt(lastResult || 'opening');
+        goto('RIDDLE_INTRO');
     }
 
     function nextRiddle() {
@@ -75,7 +87,7 @@ CY.Game = (function () {
             else if (tier === 'narrow') { CY.Audio.cyclopsSnore(); CY.Audio.playMusic('endNarrow'); }
             else { CY.Audio.cyclopsLaugh(); CY.Audio.playMusic('endCaught'); }
         } else {
-            goto('RIDDLE_INTRO');
+            enterRiddleIntro();
         }
     }
 
@@ -83,6 +95,7 @@ CY.Game = (function () {
         riddleIndex = 0;
         escapeScore = 0;
         picked = null;
+        lastResult = null;
         goto('TITLE');
         CY.Audio.playMusic('title');
     }
@@ -110,16 +123,21 @@ CY.Game = (function () {
                     CY.Audio.select();
                     if (pageIndex < CYCLOPS_INTRO.length - 1) pageIndex++;
                     else {
-                        // Opening credits are over -- the riddles play dry so the
-                        // host can talk over them without music in the way.
+                        // Opening credits end here; the tension bed takes over
+                        // once a riddle is actually on screen.
                         CY.Audio.stopMusic();
                         CY.Audio.cyclopsLaugh();
-                        goto('RIDDLE_INTRO');
+                        enterRiddleIntro();
                     }
                 }
                 break;
             case 'RIDDLE_INTRO':
-                if (advance) { CY.Audio.select(); state = 'QUESTION'; startTimer(); }
+                if (advance) {
+                    CY.Audio.select();
+                    state = 'QUESTION';
+                    startTimer();
+                    CY.Audio.playMusic('question');
+                }
                 break;
             case 'QUESTION':
                 if (letterIndex >= 0) pick(letterIndex);
@@ -152,8 +170,9 @@ CY.Game = (function () {
         var sec = Math.ceil(left);
         if (sec !== lastTickSecond) {
             lastTickSecond = sec;
+            // The tension bed supplies the pulse now, so only the final
+            // countdown gets an audible tick.
             if (sec <= 5 && sec > 0) CY.Audio.tickUrgent();
-            else if (sec > 5) CY.Audio.tick();
         }
     }
 
@@ -207,11 +226,16 @@ CY.Game = (function () {
 
         if (state === 'RIDDLE_INTRO') {
             drawCaveBg(t);
-            if (!CY.Images.draw(ctx, 'cyclops_idle', 90, 30, 140, 110)) {
-                CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 40, 1.6, 'idle', t);
+            // His mood inverts the room's fortune: smug when you miss,
+            // irritated when you land one.
+            var introMood = lastResult === 'correct' ? 'angry'
+                : (lastResult ? 'pleased' : 'idle');
+            if (!CY.Images.draw(ctx, 'cyclops_' + introMood, 96, 4, 128, 100)) {
+                CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 6, 1.3, introMood, t);
             }
-            CY.UI.drawCentered(ctx, 'RIDDLE ' + (riddleIndex + 1) + ' OF ' + CY.QUESTIONS.length, CY.WIDTH / 2, 190, 2, C.gold);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 218, t, 1, C.white);
+            CY.UI.drawDialogue(ctx, 6, 112, CY.WIDTH - 12, 62, taunt, 1);
+            CY.UI.drawCentered(ctx, 'RIDDLE ' + (riddleIndex + 1) + ' OF ' + CY.QUESTIONS.length, CY.WIDTH / 2, 184, 2, C.gold);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 214, t, 1, C.white);
             return;
         }
 
