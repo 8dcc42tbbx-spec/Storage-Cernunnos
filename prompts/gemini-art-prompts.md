@@ -115,7 +115,7 @@ Shared framing — paste this, then add the per-question line under it:
 - `assets/scene_q2_telemachus.png` — Add: A small gold laurel circlet resting beside a polished wooden hunting bow and a quiver of arrows, laid across a folded traveler's cloak on a windowsill overlooking a moonlit harbor — evoking a young prince waiting at home for his father's return.
 - `assets/scene_q3_giants.png` — Add: A dramatic size-contrast still life evoking forced-perspective filmmaking — a massive raised club/weapon silhouette looming in the foreground at enormous scale, with a lone small warrior figure fleeing in the far background of the same shot, both lit by the same cold moonlight so they clearly share one world despite the scale gap. Forest treeline in silhouette behind them, sense of chaos and motion.
 - `assets/scene_q4_imax.png` — Add: A large stylized antique brass film camera on a wooden tripod, visible film reels catching warm light, a bright cone of golden light beaming from the lens like a spotlight cutting through cave darkness — half ancient artifact, half movie magic.
-- `assets/scene_q5_runtime.png` — Add: An ornate bronze-and-glass hourglass on a carved stone pedestal, fine sand caught mid-fall and faintly luminous, dramatic raking side-light casting long shadows across the floor.
+- `assets/scene_q5_trojanhorse.png` — Add: A colossal wooden horse construction seen close on its flank at night, torch-lit from below so its individual timber planks, rope lashings, and joinery read clearly — practical carpentry, not a smooth CGI surface. A narrow dark hatch/seam is just visible in its belly, hinting at the hidden soldiers inside. Distant firelight glow of a burning city on the horizon behind it.
 - `assets/scene_q6_animatronic.png` — Add: A colossal hulking mechanical cyclops framework looming in near-silhouette — visible rivets, gears, and a single glowing lens-eye — towering over a tiny human figure standing beside a marked wooden measuring pole for scale, scattered tools in the foreground.
 - `assets/scene_q7_ancient.png` — Add: A weathered ancient papyrus scroll, half-unrolled, resting on a stone ledge, its edges frayed and darkened with age, faint ghost-like lines of ancient Greek text suggested but not legible. A sprig of dried olive leaves rests across it, tied with aged twine. Dust motes catch a single low shaft of warm light, conveying immense age and reverence.
 
@@ -154,5 +154,5 @@ Shared framing — paste this, then add the per-question line under it:
 - [ ] title.png (320×240)
 - [ ] cave_backdrop.png (320×240)
 - [ ] cyclops_idle.png / cyclops_angry.png / cyclops_pleased.png / cyclops_laugh.png / cyclops_sleeping.png (280×220)
-- [ ] scene_q1_zeuslaw.png / scene_q2_telemachus.png / scene_q3_giants.png / scene_q4_imax.png / scene_q5_runtime.png / scene_q6_animatronic.png / scene_q7_ancient.png (312×118)
+- [ ] scene_q1_zeuslaw.png / scene_q2_telemachus.png / scene_q3_giants.png / scene_q4_imax.png / scene_q5_trojanhorse.png / scene_q6_animatronic.png / scene_q7_ancient.png (312×118)
 - [ ] ending_great.png / ending_narrow.png / ending_caught.png (320×240)

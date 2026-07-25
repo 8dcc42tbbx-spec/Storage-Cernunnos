@@ -48,11 +48,16 @@ CY.QUESTIONS = [
         fact: 'IT IS THE FIRST FEATURE FILM SHOT ENTIRELY WITH IMAX FILM CAMERAS.'
     },
     {
-        scene: 'q5_runtime',
-        question: 'WHAT IS THE FILM\'S THEATRICAL RUNTIME?',
-        options: ['1 HR 45 MIN', '2 HR 52 MIN', '3 HR 30 MIN', '4 HR 15 MIN'],
-        correct: 1,
-        fact: 'THE ODYSSEY RUNS 2 HOURS 52 MINUTES -- LIMITED BY IMAX 70MM REEL LENGTH.'
+        scene: 'q5_trojanhorse',
+        question: 'HOW DID NOLAN ACTUALLY FILM THE TROJAN HORSE INTERIOR?',
+        options: [
+            'CRAMMED IN WITH THE CAST AND AN IMAX CAMERA',
+            'BUILT A TINY MODEL AND SHOT IT MACRO',
+            'SHOT IT ON A GREEN-SCREEN VOLUME STAGE',
+            "CGI'D THE WHOLE INTERIOR IN POST"
+        ],
+        correct: 0,
+        fact: 'NOLAN CLIMBED INSIDE THE PRACTICAL 35-FOOT HORSE WITH THE CAST AND AN IMAX CAMERA TO SHOOT IT LIVE.'
     },
     {
         scene: 'q6_animatronic',

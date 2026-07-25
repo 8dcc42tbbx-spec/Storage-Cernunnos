@@ -268,17 +268,18 @@ CY.Art = {};
                 centered(ctx, rows4, P, cx, cy, 7);
                 break;
             }
-            case 'q5_runtime': { // hourglass
+            case 'q5_trojanhorse': { // a practical wooden horse on a rolling base
                 var rows5 = [
-                    'mmmmmmm',
-                    '.mmmmm.',
-                    '..mgm..',
-                    '...g...',
-                    '..mgm..',
-                    '.mmmmm.',
-                    'mmmmmmm'
+                    '...bb....',
+                    '..bbbb...',
+                    '.bbbbbb..',
+                    'bbbbbbbb.',
+                    'bbbbbbbbb',
+                    'bbbbbbbbb',
+                    'b.b...b.b',
+                    '.k.....k.'
                 ];
-                centered(ctx, rows5, P, cx, cy, 8);
+                centered(ctx, rows5, P, cx, cy, 7);
                 break;
             }
             case 'q6_animatronic': { // giant robot cyclops + tiny human + ruler
