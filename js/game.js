@@ -29,6 +29,10 @@ CY.Game = (function () {
 
     function q() { return CY.QUESTIONS[riddleIndex]; }
 
+    function endingTier() {
+        return escapeScore >= 6 ? 'great' : (escapeScore >= 3 ? 'narrow' : 'caught');
+    }
+
     function goto(next) {
         state = next;
         pageIndex = 0;
@@ -54,8 +58,10 @@ CY.Game = (function () {
         if (index !== null && index === q().correct) {
             escapeScore++;
             CY.Audio.correct();
+            CY.Audio.cyclopsPleased();
         } else {
             CY.Audio.wrong();
+            CY.Audio.cyclopsAngry();
         }
     }
 
@@ -64,9 +70,10 @@ CY.Game = (function () {
         picked = null;
         if (riddleIndex >= CY.QUESTIONS.length) {
             goto('ENDING');
-            if (escapeScore >= 6) CY.Audio.fanfare();
-            else if (escapeScore >= 3) CY.Audio.confirm();
-            else CY.Audio.sad();
+            var tier = endingTier();
+            if (tier === 'great') { CY.Audio.cyclopsRoar(); CY.Audio.playMusic('endGreat'); }
+            else if (tier === 'narrow') { CY.Audio.cyclopsSnore(); CY.Audio.playMusic('endNarrow'); }
+            else { CY.Audio.cyclopsLaugh(); CY.Audio.playMusic('endCaught'); }
         } else {
             goto('RIDDLE_INTRO');
         }
@@ -77,6 +84,7 @@ CY.Game = (function () {
         escapeScore = 0;
         picked = null;
         goto('TITLE');
+        CY.Audio.playMusic('title');
     }
 
     // action is 'ADVANCE' | 'A' | 'B' | 'C' | 'D' -- shared by the keyboard
@@ -94,14 +102,20 @@ CY.Game = (function () {
                 if (advance) {
                     CY.Audio.select();
                     if (pageIndex < CRAWL.length - 1) pageIndex++;
-                    else { CY.Audio.roar(); goto('CYCLOPS_INTRO'); }
+                    else { CY.Audio.cyclopsRoar(); goto('CYCLOPS_INTRO'); }
                 }
                 break;
             case 'CYCLOPS_INTRO':
                 if (advance) {
                     CY.Audio.select();
                     if (pageIndex < CYCLOPS_INTRO.length - 1) pageIndex++;
-                    else goto('RIDDLE_INTRO');
+                    else {
+                        // Opening credits are over -- the riddles play dry so the
+                        // host can talk over them without music in the way.
+                        CY.Audio.stopMusic();
+                        CY.Audio.cyclopsLaugh();
+                        goto('RIDDLE_INTRO');
+                    }
                 }
                 break;
             case 'RIDDLE_INTRO':
@@ -122,6 +136,7 @@ CY.Game = (function () {
 
     function handleKey(e) {
         var k = e.key;
+        if (k === 'm' || k === 'M') { e.preventDefault(); CY.Audio.toggleMute(); return; }
         var action = null;
         if (k === ' ' || k === 'Enter') action = 'ADVANCE';
         else if (/^[abcdABCD]$/.test(k)) action = k.toUpperCase();
@@ -247,7 +262,7 @@ CY.Game = (function () {
         }
 
         if (state === 'ENDING') {
-            var tier = escapeScore >= 6 ? 'great' : (escapeScore >= 3 ? 'narrow' : 'caught');
+            var tier = endingTier();
             var drawFn = { great: CY.Art.drawEndingGreat, narrow: CY.Art.drawEndingNarrow, caught: CY.Art.drawEndingCaught }[tier];
             if (!CY.Images.draw(ctx, 'ending_' + tier, 0, 0, CY.WIDTH, CY.HEIGHT)) {
                 drawFn(ctx, t);
@@ -267,11 +282,23 @@ CY.Game = (function () {
     return {
         // For on-screen touch controls: CY.Game.action('ADVANCE' | 'A' | 'B' | 'C' | 'D')
         action: function (a) { dispatch(a); },
+        toggleMute: function () { return CY.Audio.toggleMute(); },
         init: function (canvasEl) {
             canvas = canvasEl;
             ctx = canvas.getContext('2d');
             ctx.imageSmoothingEnabled = false;
             window.addEventListener('keydown', handleKey);
+
+            // Browsers block audio until the user interacts. Ask for the opening
+            // theme now -- CY.Audio queues it and starts it on the first gesture
+            // if the context is still locked.
+            CY.Audio.playMusic('title');
+            var unlockAudio = function () {
+                CY.Audio.unlock();
+                window.removeEventListener('pointerdown', unlockAudio);
+            };
+            window.addEventListener('pointerdown', unlockAudio);
+
             requestAnimationFrame(loop);
         }
     };
