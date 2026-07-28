@@ -16,6 +16,14 @@ CY.UI = {};
         rect(ctx, x + 3, y + 3, w - 6, h - 6, C.parchment);
     };
 
+    // Darkens a band of artwork so overlaid text stays readable on top of it.
+    CY.UI.drawScrim = function (ctx, x, y, w, h, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha === undefined ? 0.72 : alpha;
+        rect(ctx, x, y, w, h, C.black);
+        ctx.restore();
+    };
+
     CY.UI.drawHUD = function (ctx, riddleIndex, total, escapeScore, hint) {
         rect(ctx, 0, 0, CY.WIDTH, 14, C.black);
         CY.drawText(ctx, 'RIDDLE ' + riddleIndex + '/' + total, 4, 4, 1, C.gold);

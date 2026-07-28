@@ -22,7 +22,13 @@ CY.Images = (function () {
     });
 
     return {
+        has: function (key) {
+            var e = store[key];
+            return !!(e && e.ready);
+        },
+
         // Draws the override image into x,y,w,h if it loaded; returns true if drawn.
+        // Stretches to fit, so only use where the art matches the rect's aspect.
         draw: function (ctx, key, x, y, w, h) {
             var entry = store[key];
             if (entry && entry.ready) {
@@ -30,6 +36,26 @@ CY.Images = (function () {
                 return true;
             }
             return false;
+        },
+
+        // Fills the rect while preserving the image's aspect, centre-cropping
+        // the overflow. focalY (0 = top, 0.5 = middle, 1 = bottom) biases a
+        // vertical crop -- portraits want it high so the face survives.
+        drawCover: function (ctx, key, dx, dy, dw, dh, focalY) {
+            var e = store[key];
+            if (!e || !e.ready) return false;
+            var iw = e.img.naturalWidth, ih = e.img.naturalHeight;
+            if (!iw || !ih) return false;
+            var srcA = iw / ih, dstA = dw / dh;
+            var sx, sy, sw, sh;
+            if (srcA > dstA) {          // source too wide: trim the sides
+                sh = ih; sw = ih * dstA; sy = 0; sx = (iw - sw) / 2;
+            } else {                    // source too tall: trim top/bottom
+                sw = iw; sh = iw / dstA; sx = 0;
+                sy = (ih - sh) * (focalY === undefined ? 0.5 : focalY);
+            }
+            ctx.drawImage(e.img, sx, sy, sw, sh, dx, dy, dw, dh);
+            return true;
         }
     };
 })();

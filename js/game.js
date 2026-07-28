@@ -205,37 +205,45 @@ CY.Game = (function () {
 
         if (state === 'CRAWL') {
             drawCaveBg(t);
-            CY.Art.drawTorch(ctx, 20, 60, t);
-            CY.Art.drawTorch(ctx, CY.WIDTH - 20, 60, t);
+            // The painted backdrop has its own torches; only light the
+            // procedural fallback.
+            if (!CY.Images.has('cave_backdrop')) {
+                CY.Art.drawTorch(ctx, 20, 60, t);
+                CY.Art.drawTorch(ctx, CY.WIDTH - 20, 60, t);
+            }
+            CY.UI.drawCentered(ctx, (pageIndex + 1) + '/' + CRAWL.length, CY.WIDTH - 22, 140, 1, C.parchmentDark);
             CY.UI.drawDialogue(ctx, 20, 150, CY.WIDTH - 40, 74, CRAWL[pageIndex], 1);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 232, t, 1, C.parchment);
-            CY.UI.drawCentered(ctx, (pageIndex + 1) + '/' + CRAWL.length, CY.WIDTH - 30, 158, 1, C.caveHi);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 230, t, 1, C.parchment);
             return;
         }
 
         if (state === 'CYCLOPS_INTRO') {
-            drawCaveBg(t);
             var mood = pageIndex === CYCLOPS_INTRO.length - 1 ? 'laugh' : 'idle';
-            if (!CY.Images.draw(ctx, 'cyclops_' + mood, 90, 10, 140, 110)) {
+            // Full-bleed portrait with the dialogue over it -- the art is a
+            // close-up, so boxing it into a corner wastes it.
+            if (!CY.Images.drawCover(ctx, 'cyclops_' + mood, 0, 0, CY.WIDTH, CY.HEIGHT, 0.32)) {
+                drawCaveBg(t);
                 CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 20, 1.6, mood, t);
             }
-            CY.UI.drawDialogue(ctx, 20, 150, CY.WIDTH - 40, 74, CYCLOPS_INTRO[pageIndex], 1);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 232, t, 1, C.parchment);
+            CY.UI.drawScrim(ctx, 0, 140, CY.WIDTH, CY.HEIGHT - 140, 0.7);
+            CY.UI.drawDialogue(ctx, 8, 148, CY.WIDTH - 16, 66, CYCLOPS_INTRO[pageIndex], 1);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 224, t, 1, C.parchment);
             return;
         }
 
         if (state === 'RIDDLE_INTRO') {
-            drawCaveBg(t);
             // His mood inverts the room's fortune: smug when you miss,
             // irritated when you land one.
             var introMood = lastResult === 'correct' ? 'angry'
                 : (lastResult ? 'pleased' : 'idle');
-            if (!CY.Images.draw(ctx, 'cyclops_' + introMood, 96, 4, 128, 100)) {
+            if (!CY.Images.drawCover(ctx, 'cyclops_' + introMood, 0, 0, CY.WIDTH, CY.HEIGHT, 0.32)) {
+                drawCaveBg(t);
                 CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 6, 1.3, introMood, t);
             }
-            CY.UI.drawDialogue(ctx, 6, 112, CY.WIDTH - 12, 62, taunt, 1);
-            CY.UI.drawCentered(ctx, 'RIDDLE ' + (riddleIndex + 1) + ' OF ' + CY.QUESTIONS.length, CY.WIDTH / 2, 184, 2, C.gold);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 214, t, 1, C.white);
+            CY.UI.drawScrim(ctx, 0, 144, CY.WIDTH, CY.HEIGHT - 144, 0.74);
+            CY.UI.drawCentered(ctx, 'RIDDLE ' + (riddleIndex + 1) + ' OF ' + CY.QUESTIONS.length, CY.WIDTH / 2, 150, 2, C.gold);
+            CY.UI.drawDialogue(ctx, 8, 170, CY.WIDTH - 16, 48, taunt, 1);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 224, t, 1, C.white);
             return;
         }
 
@@ -249,8 +257,10 @@ CY.Game = (function () {
             // canvas, so drawing the HUD before them would wipe it out.
             if (isRevealed) {
                 // The reveal is the payoff beat: the Cyclops reacts to the answer.
+                // Cover the whole banner slot so it reads as a dramatic close-up
+                // rather than a portrait floating over the previous scene.
                 var mood = gotIt ? 'pleased' : 'angry';
-                if (!CY.Images.draw(ctx, 'cyclops_' + mood, 90, 14, 140, 110)) {
+                if (!CY.Images.drawCover(ctx, 'cyclops_' + mood, 4, 14, CY.WIDTH - 8, 118, 0.26)) {
                     drawCaveBg(t);
                     CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 18, 1.4, mood, t);
                 }
@@ -288,11 +298,23 @@ CY.Game = (function () {
         if (state === 'ENDING') {
             var tier = endingTier();
             var drawFn = { great: CY.Art.drawEndingGreat, narrow: CY.Art.drawEndingNarrow, caught: CY.Art.drawEndingCaught }[tier];
-            if (!CY.Images.draw(ctx, 'ending_' + tier, 0, 0, CY.WIDTH, CY.HEIGHT)) {
-                drawFn(ctx, t);
+            var usedArt = CY.Images.draw(ctx, 'ending_' + tier, 0, 0, CY.WIDTH, CY.HEIGHT);
+            if (!usedArt) drawFn(ctx, t);
+            // The painted endings are bright; without this the score sinks into
+            // the grass. The procedural ones only need a light touch.
+            CY.UI.drawScrim(ctx, 0, 190, CY.WIDTH, CY.HEIGHT - 190, usedArt ? 0.72 : 0.4);
+            if (usedArt) {
+                // The procedural endings draw their own headline; the art
+                // versions need one so the outcome reads at a glance.
+                var head = {
+                    great: 'THE BOULDER ROLLS ASIDE -- ODYSSEUS ESCAPES!',
+                    narrow: 'YOU SLIP PAST HIS SNORES. A NARROW ESCAPE!',
+                    caught: 'CAUGHT! YOU PEEL POTATOES FOR HIS STEW.'
+                }[tier];
+                CY.UI.drawCentered(ctx, head, CY.WIDTH / 2, 196, 1, tier === 'caught' ? C.red : C.gold);
             }
-            CY.UI.drawCentered(ctx, 'FINAL SCORE: ' + escapeScore + ' / ' + CY.QUESTIONS.length, CY.WIDTH / 2, 222, 1, C.parchment);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE TO PLAY AGAIN', CY.WIDTH / 2, 232, t, 1, C.white);
+            CY.UI.drawCentered(ctx, 'FINAL SCORE: ' + escapeScore + ' / ' + CY.QUESTIONS.length, CY.WIDTH / 2, 212, 1, C.parchment);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE TO PLAY AGAIN', CY.WIDTH / 2, 228, t, 1, C.white);
             return;
         }
     }
