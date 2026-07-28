@@ -16,6 +16,13 @@ CY.Game = (function () {
     var lastResult = null;   // 'correct' | 'wrong' | 'none' -- drives the taunt
     var taunt = '';          // chosen once per round, never inside draw()
 
+    // Portrait framing. FACE_H reserves the top of the screen for the Cyclops
+    // so no text panel ever sits over him; FACE_FOCAL aims the crop low enough
+    // to keep both the eye and the mouth in frame, since the mouth carries most
+    // of the expression.
+    var FACE_H = 176;
+    var FACE_FOCAL = 0.6;
+
     var CRAWL = [
         'YOU ARE ODYSSEUS, KING OF ITHACA, BLOWN OFF COURSE SAILING HOME FROM TROY.',
         'YOUR SHIP TOOK SHELTER IN A SEASIDE CAVE -- THE LAIR OF THE CYCLOPS POLYPHEMUS.',
@@ -219,15 +226,15 @@ CY.Game = (function () {
 
         if (state === 'CYCLOPS_INTRO') {
             var mood = pageIndex === CYCLOPS_INTRO.length - 1 ? 'laugh' : 'idle';
-            // Full-bleed portrait with the dialogue over it -- the art is a
-            // close-up, so boxing it into a corner wastes it.
-            if (!CY.Images.drawCover(ctx, 'cyclops_' + mood, 0, 0, CY.WIDTH, CY.HEIGHT, 0.32)) {
-                drawCaveBg(t);
+            drawCaveBg(t);
+            // The art sits ABOVE the dialogue rather than behind it. His mouth
+            // is what separates a smirk from a snarl, and it lands right where
+            // a text panel would otherwise cover it.
+            if (!CY.Images.drawCover(ctx, 'cyclops_' + mood, 0, 0, CY.WIDTH, FACE_H, FACE_FOCAL)) {
                 CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 20, 1.6, mood, t);
             }
-            CY.UI.drawScrim(ctx, 0, 140, CY.WIDTH, CY.HEIGHT - 140, 0.7);
-            CY.UI.drawDialogue(ctx, 8, 148, CY.WIDTH - 16, 66, CYCLOPS_INTRO[pageIndex], 1);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 224, t, 1, C.parchment);
+            CY.UI.drawDialogue(ctx, 6, FACE_H + 4, CY.WIDTH - 12, 44, CYCLOPS_INTRO[pageIndex], 1);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 230, t, 1, C.parchment);
             return;
         }
 
@@ -236,14 +243,16 @@ CY.Game = (function () {
             // irritated when you land one.
             var introMood = lastResult === 'correct' ? 'angry'
                 : (lastResult ? 'pleased' : 'idle');
-            if (!CY.Images.drawCover(ctx, 'cyclops_' + introMood, 0, 0, CY.WIDTH, CY.HEIGHT, 0.32)) {
-                drawCaveBg(t);
+            drawCaveBg(t);
+            if (!CY.Images.drawCover(ctx, 'cyclops_' + introMood, 0, 0, CY.WIDTH, FACE_H, FACE_FOCAL)) {
                 CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 6, 1.3, introMood, t);
             }
-            CY.UI.drawScrim(ctx, 0, 144, CY.WIDTH, CY.HEIGHT - 144, 0.74);
-            CY.UI.drawCentered(ctx, 'RIDDLE ' + (riddleIndex + 1) + ' OF ' + CY.QUESTIONS.length, CY.WIDTH / 2, 150, 2, C.gold);
-            CY.UI.drawDialogue(ctx, 8, 170, CY.WIDTH - 16, 48, taunt, 1);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 224, t, 1, C.white);
+            // Counter rides over the top of the art, where there is only
+            // forehead and cave, leaving the expressive part of the face clear.
+            CY.UI.drawScrim(ctx, 0, 0, CY.WIDTH, 13, 0.55);
+            CY.UI.drawCentered(ctx, 'RIDDLE ' + (riddleIndex + 1) + ' OF ' + CY.QUESTIONS.length, CY.WIDTH / 2, 3, 1, C.gold);
+            CY.UI.drawDialogue(ctx, 6, FACE_H + 4, CY.WIDTH - 12, 44, taunt, 1);
+            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 230, t, 1, C.white);
             return;
         }
 
@@ -260,8 +269,11 @@ CY.Game = (function () {
                 // Cover the whole banner slot so it reads as a dramatic close-up
                 // rather than a portrait floating over the previous scene.
                 var mood = gotIt ? 'pleased' : 'angry';
-                if (!CY.Images.drawCover(ctx, 'cyclops_' + mood, 4, 14, CY.WIDTH - 8, 118, 0.26)) {
-                    drawCaveBg(t);
+                // This slot is too shallow to crop the eye AND the mouth into,
+                // and both are needed to read the reaction -- so fit the whole
+                // portrait and let the cave fill either side.
+                drawCaveBg(t);
+                if (!CY.Images.drawContain(ctx, 'cyclops_' + mood, 4, 14, CY.WIDTH - 8, 118)) {
                     CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 18, 1.4, mood, t);
                 }
             } else {

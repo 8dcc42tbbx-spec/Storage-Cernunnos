@@ -41,6 +41,20 @@ CY.Images = (function () {
             return false;
         },
 
+        // Fits the whole image inside the rect, centred, cropping nothing.
+        // Use where losing any part of the image matters more than filling
+        // the space -- the caller is responsible for what shows behind it.
+        drawContain: function (ctx, key, dx, dy, dw, dh) {
+            var e = store[key];
+            if (!e || !e.ready) return false;
+            var iw = e.img.naturalWidth, ih = e.img.naturalHeight;
+            if (!iw || !ih) return false;
+            var scale = Math.min(dw / iw, dh / ih);
+            var w = Math.round(iw * scale), h = Math.round(ih * scale);
+            ctx.drawImage(e.img, Math.round(dx + (dw - w) / 2), Math.round(dy + (dh - h) / 2), w, h);
+            return true;
+        },
+
         // Fills the rect while preserving the image's aspect, centre-cropping
         // the overflow. focalY (0 = top, 0.5 = middle, 1 = bottom) biases a
         // vertical crop -- portraits want it high so the face survives.
