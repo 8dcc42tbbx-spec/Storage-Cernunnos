@@ -5,7 +5,7 @@ PR.LevelData = [
     // ============================================================
     { // Level 1: Morning Shift
         name: "Morning Shift",
-        theme: 0, width: 2400, groundY: 12,
+        theme: 0, width: 2400, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "14 Wattle Street",
         spawns: [
@@ -24,13 +24,13 @@ PR.LevelData = [
         ],
         terrain: [],
         platforms: [
-            { x: 800, y: 144, w: 64 },
-            { x: 1600, y: 144, w: 48 }
+            { x: 800, y: 96, w: 64 },
+            { x: 1600, y: 96, w: 48 }
         ]
     },
     { // Level 2: Barking Mad
         name: "Barking Mad",
-        theme: 0, width: 2800, groundY: 12,
+        theme: 0, width: 2800, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "7 Banksia Ave",
         spawns: [
@@ -56,13 +56,13 @@ PR.LevelData = [
             { x: 1000, w: 64, type: 'raised', height: 2 }
         ],
         platforms: [
-            { x: 600, y: 144, w: 48 },
-            { x: 1600, y: 128, w: 64 }
+            { x: 600, y: 96, w: 48 },
+            { x: 1600, y: 80, w: 64 }
         ]
     },
     { // Level 3: Magpie Season
         name: "Magpie Season",
-        theme: 0, width: 3000, groundY: 12,
+        theme: 0, width: 3000, groundY: 9,
         deliveryType: 'locker',
         deliveryAddress: "Grevillea Park Lockers",
         spawns: [
@@ -88,14 +88,14 @@ PR.LevelData = [
         ],
         terrain: [],
         platforms: [
-            { x: 500, y: 128, w: 48 },
-            { x: 1300, y: 144, w: 80 },
-            { x: 2100, y: 128, w: 48 }
+            { x: 500, y: 80, w: 48 },
+            { x: 1300, y: 96, w: 80 },
+            { x: 2100, y: 80, w: 48 }
         ]
     },
     { // Level 4: Suburbia Showdown
         name: "Suburbia Showdown",
-        theme: 0, width: 3200, groundY: 12,
+        theme: 0, width: 3200, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "22 Eucalyptus Cres",
         spawns: [
@@ -127,9 +127,9 @@ PR.LevelData = [
             { x: 1800, w: 48, type: 'raised', height: 2 }
         ],
         platforms: [
-            { x: 400, y: 128, w: 64 },
-            { x: 1000, y: 144, w: 48 },
-            { x: 2100, y: 128, w: 80 }
+            { x: 400, y: 80, w: 64 },
+            { x: 1000, y: 96, w: 48 },
+            { x: 2100, y: 80, w: 80 }
         ]
     },
 
@@ -138,7 +138,7 @@ PR.LevelData = [
     // ============================================================
     { // Level 5: City Limits
         name: "City Limits",
-        theme: 1, width: 3000, groundY: 12,
+        theme: 1, width: 3000, groundY: 9,
         deliveryType: 'locker',
         deliveryAddress: "CBD Parcel Locker 2041",
         spawns: [
@@ -163,15 +163,15 @@ PR.LevelData = [
         ],
         terrain: [],
         platforms: [
-            { x: 400, y: 128, w: 64 },
-            { x: 900, y: 112, w: 48 },
-            { x: 1400, y: 128, w: 96 },
-            { x: 2300, y: 128, w: 64 }
+            { x: 400, y: 80, w: 64 },
+            { x: 900, y: 64, w: 48 },
+            { x: 1400, y: 80, w: 96 },
+            { x: 2300, y: 80, w: 64 }
         ]
     },
     { // Level 6: Rush Hour
         name: "Rush Hour",
-        theme: 1, width: 3400, groundY: 12,
+        theme: 1, width: 3400, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "Unit 5/180 King St",
         spawns: [
@@ -203,15 +203,15 @@ PR.LevelData = [
             { x: 800, w: 64, type: 'raised', height: 1 }
         ],
         platforms: [
-            { x: 500, y: 112, w: 48 },
-            { x: 1100, y: 128, w: 64 },
-            { x: 2000, y: 112, w: 80 },
-            { x: 2700, y: 128, w: 48 }
+            { x: 500, y: 64, w: 48 },
+            { x: 1100, y: 80, w: 64 },
+            { x: 2000, y: 64, w: 80 },
+            { x: 2700, y: 80, w: 48 }
         ]
     },
     { // Level 7: Shopping Strip
         name: "Shopping Strip",
-        theme: 1, width: 3600, groundY: 12,
+        theme: 1, width: 3600, groundY: 9,
         deliveryType: 'locker',
         deliveryAddress: "Highgate Mall Lockers",
         spawns: [
@@ -241,15 +241,15 @@ PR.LevelData = [
         ],
         terrain: [],
         platforms: [
-            { x: 350, y: 112, w: 64 },
-            { x: 900, y: 128, w: 80 },
-            { x: 1700, y: 112, w: 48 },
-            { x: 2600, y: 128, w: 64 }
+            { x: 350, y: 64, w: 64 },
+            { x: 900, y: 80, w: 80 },
+            { x: 1700, y: 64, w: 48 },
+            { x: 2600, y: 80, w: 64 }
         ]
     },
     { // Level 8: Urban Jungle
         name: "Urban Jungle",
-        theme: 1, width: 3800, groundY: 12,
+        theme: 1, width: 3800, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "42 Collins Street",
         spawns: [
@@ -286,10 +286,10 @@ PR.LevelData = [
             { x: 2400, w: 48, type: 'raised', height: 1 }
         ],
         platforms: [
-            { x: 600, y: 112, w: 64 },
-            { x: 1100, y: 128, w: 48 },
-            { x: 2000, y: 112, w: 80 },
-            { x: 3000, y: 128, w: 64 }
+            { x: 600, y: 64, w: 64 },
+            { x: 1100, y: 80, w: 48 },
+            { x: 2000, y: 64, w: 80 },
+            { x: 3000, y: 80, w: 64 }
         ]
     },
 
@@ -298,7 +298,7 @@ PR.LevelData = [
     // ============================================================
     { // Level 9: Country Road
         name: "Country Road",
-        theme: 2, width: 3200, groundY: 12,
+        theme: 2, width: 3200, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "Lot 4 Murray Highway",
         spawns: [
@@ -322,14 +322,14 @@ PR.LevelData = [
         ],
         terrain: [],
         platforms: [
-            { x: 700, y: 144, w: 64 },
-            { x: 1500, y: 128, w: 48 },
-            { x: 2200, y: 144, w: 80 }
+            { x: 700, y: 96, w: 64 },
+            { x: 1500, y: 80, w: 48 },
+            { x: 2200, y: 96, w: 80 }
         ]
     },
     { // Level 10: The Pub Run
         name: "The Pub Run",
-        theme: 2, width: 3400, groundY: 12,
+        theme: 2, width: 3400, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "Royal Hotel, Main St",
         spawns: [
@@ -359,14 +359,14 @@ PR.LevelData = [
             { x: 1000, w: 80, type: 'raised', height: 1 }
         ],
         platforms: [
-            { x: 400, y: 128, w: 64 },
-            { x: 1400, y: 144, w: 48 },
-            { x: 2200, y: 128, w: 64 }
+            { x: 400, y: 80, w: 64 },
+            { x: 1400, y: 96, w: 48 },
+            { x: 2200, y: 80, w: 64 }
         ]
     },
     { // Level 11: Wheat Belt Express
         name: "Wheat Belt Express",
-        theme: 2, width: 3600, groundY: 12,
+        theme: 2, width: 3600, groundY: 9,
         deliveryType: 'locker',
         deliveryAddress: "Gundagai PO Lockers",
         spawns: [
@@ -398,14 +398,14 @@ PR.LevelData = [
             { x: 2000, w: 64, type: 'raised', height: 1 }
         ],
         platforms: [
-            { x: 900, y: 128, w: 80 },
-            { x: 1700, y: 144, w: 48 },
-            { x: 2500, y: 128, w: 64 }
+            { x: 900, y: 80, w: 80 },
+            { x: 1700, y: 96, w: 48 },
+            { x: 2500, y: 80, w: 64 }
         ]
     },
     { // Level 12: Harvest Havoc
         name: "Harvest Havoc",
-        theme: 2, width: 3800, groundY: 12,
+        theme: 2, width: 3800, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "Willow Farm, RMB 247",
         spawns: [
@@ -437,10 +437,10 @@ PR.LevelData = [
         ],
         terrain: [],
         platforms: [
-            { x: 500, y: 128, w: 64 },
-            { x: 1400, y: 112, w: 48 },
-            { x: 2300, y: 128, w: 80 },
-            { x: 3200, y: 144, w: 48 }
+            { x: 500, y: 80, w: 64 },
+            { x: 1400, y: 64, w: 48 },
+            { x: 2300, y: 80, w: 80 },
+            { x: 3200, y: 96, w: 48 }
         ]
     },
 
@@ -449,7 +449,7 @@ PR.LevelData = [
     // ============================================================
     { // Level 13: Beach Run
         name: "Beach Run",
-        theme: 3, width: 3200, groundY: 12,
+        theme: 3, width: 3200, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "3 Ocean Parade",
         spawns: [
@@ -475,14 +475,14 @@ PR.LevelData = [
         ],
         terrain: [],
         platforms: [
-            { x: 700, y: 128, w: 64 },
-            { x: 1300, y: 144, w: 48 },
-            { x: 2000, y: 128, w: 80 }
+            { x: 700, y: 80, w: 64 },
+            { x: 1300, y: 96, w: 48 },
+            { x: 2000, y: 80, w: 80 }
         ]
     },
     { // Level 14: Boardwalk Blitz
         name: "Boardwalk Blitz",
-        theme: 3, width: 3400, groundY: 12,
+        theme: 3, width: 3400, groundY: 9,
         deliveryType: 'locker',
         deliveryAddress: "Surf Club Lockers",
         spawns: [
@@ -513,14 +513,14 @@ PR.LevelData = [
             { x: 2100, w: 64, type: 'raised', height: 2 }
         ],
         platforms: [
-            { x: 500, y: 112, w: 80 },
-            { x: 1300, y: 128, w: 48 },
-            { x: 2400, y: 128, w: 64 }
+            { x: 500, y: 64, w: 80 },
+            { x: 1300, y: 80, w: 48 },
+            { x: 2400, y: 80, w: 64 }
         ]
     },
     { // Level 15: Tide's Coming In
         name: "Tide's Coming In",
-        theme: 3, width: 3600, groundY: 12,
+        theme: 3, width: 3600, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "17 Coral Crescent",
         spawns: [
@@ -551,15 +551,15 @@ PR.LevelData = [
         ],
         terrain: [],
         platforms: [
-            { x: 500, y: 128, w: 64 },
-            { x: 1300, y: 112, w: 80 },
-            { x: 2200, y: 128, w: 48 },
-            { x: 2900, y: 128, w: 64 }
+            { x: 500, y: 80, w: 64 },
+            { x: 1300, y: 64, w: 80 },
+            { x: 2200, y: 80, w: 48 },
+            { x: 2900, y: 80, w: 64 }
         ]
     },
     { // Level 16: Storm Surge
         name: "Storm Surge",
-        theme: 3, width: 3800, groundY: 12,
+        theme: 3, width: 3800, groundY: 9,
         deliveryType: 'locker',
         deliveryAddress: "Marina Parcel Point",
         spawns: [
@@ -595,11 +595,11 @@ PR.LevelData = [
             { x: 2100, w: 64, type: 'raised', height: 1 }
         ],
         platforms: [
-            { x: 400, y: 112, w: 64 },
-            { x: 1100, y: 128, w: 80 },
-            { x: 1700, y: 112, w: 48 },
-            { x: 2500, y: 128, w: 64 },
-            { x: 3400, y: 128, w: 48 }
+            { x: 400, y: 64, w: 64 },
+            { x: 1100, y: 80, w: 80 },
+            { x: 1700, y: 64, w: 48 },
+            { x: 2500, y: 80, w: 64 },
+            { x: 3400, y: 80, w: 48 }
         ]
     },
 
@@ -608,7 +608,7 @@ PR.LevelData = [
     // ============================================================
     { // Level 17: The Long Road
         name: "The Long Road",
-        theme: 4, width: 3400, groundY: 12,
+        theme: 4, width: 3400, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "Mulga Station",
         spawns: [
@@ -633,14 +633,14 @@ PR.LevelData = [
         ],
         terrain: [],
         platforms: [
-            { x: 700, y: 128, w: 64 },
-            { x: 1400, y: 144, w: 48 },
-            { x: 2300, y: 128, w: 80 }
+            { x: 700, y: 80, w: 64 },
+            { x: 1400, y: 96, w: 48 },
+            { x: 2300, y: 80, w: 80 }
         ]
     },
     { // Level 18: Dust Storm
         name: "Dust Storm",
-        theme: 4, width: 3600, groundY: 12,
+        theme: 4, width: 3600, groundY: 9,
         deliveryType: 'locker',
         deliveryAddress: "Broken Hill PO Lockers",
         spawns: [
@@ -672,14 +672,14 @@ PR.LevelData = [
             { x: 2400, w: 48, type: 'raised', height: 1 }
         ],
         platforms: [
-            { x: 500, y: 128, w: 64 },
-            { x: 1500, y: 112, w: 48 },
-            { x: 2700, y: 128, w: 80 }
+            { x: 500, y: 80, w: 64 },
+            { x: 1500, y: 64, w: 48 },
+            { x: 2700, y: 80, w: 80 }
         ]
     },
     { // Level 19: No Man's Land
         name: "No Man's Land",
-        theme: 4, width: 4000, groundY: 12,
+        theme: 4, width: 4000, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "Woop Woop Station",
         spawns: [
@@ -718,15 +718,15 @@ PR.LevelData = [
             { x: 2800, w: 48, type: 'raised', height: 2 }
         ],
         platforms: [
-            { x: 400, y: 112, w: 64 },
-            { x: 1100, y: 128, w: 48 },
-            { x: 2000, y: 112, w: 80 },
-            { x: 3000, y: 128, w: 64 }
+            { x: 400, y: 64, w: 64 },
+            { x: 1100, y: 80, w: 48 },
+            { x: 2000, y: 64, w: 80 },
+            { x: 3000, y: 80, w: 64 }
         ]
     },
     { // Level 20: FINAL DELIVERY (Boss: Giant Rottweiler)
         name: "Final Delivery",
-        theme: 4, width: 4200, groundY: 12,
+        theme: 4, width: 4200, groundY: 9,
         deliveryType: 'house',
         deliveryAddress: "The Last House",
         boss: { type: 'rottweiler' },
@@ -769,11 +769,11 @@ PR.LevelData = [
             { x: 2700, w: 64, type: 'raised', height: 2 }
         ],
         platforms: [
-            { x: 500, y: 112, w: 80 },
-            { x: 1000, y: 128, w: 48 },
-            { x: 2000, y: 112, w: 64 },
-            { x: 3000, y: 128, w: 80 },
-            { x: 3800, y: 128, w: 48 }
+            { x: 500, y: 64, w: 80 },
+            { x: 1000, y: 80, w: 48 },
+            { x: 2000, y: 64, w: 64 },
+            { x: 3000, y: 80, w: 80 },
+            { x: 3800, y: 80, w: 48 }
         ]
     }
 ];

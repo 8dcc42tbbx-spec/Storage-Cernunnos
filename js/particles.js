@@ -1,7 +1,7 @@
 // Postie Run - Particle System
 PR.Particles = {
     pool: [],
-    MAX_PARTICLES: 500,
+    MAX_PARTICLES: 700,
     stampMarks: [],
 
     init: function() {
@@ -26,9 +26,9 @@ PR.Particles = {
 
     emit: function(x, y, preset) {
         var presets = {
-            explosion: { count: 16, speed: [1, 3.5], angle: [0, Math.PI * 2],
-                life: [10, 25], size: [1, 3], colors: ['#FF2200','#FF6600','#FFCC00','#FFFFFF'],
-                gravity: 0.1, friction: 0.96, type: 'circle' },
+            explosion: { count: 22, speed: [1.5, 4.5], angle: [0, Math.PI * 2],
+                life: [12, 30], size: [1, 4], colors: ['#FF2200','#FF6600','#FFCC00','#FFFFFF','#FF4400'],
+                gravity: 0.1, friction: 0.95, type: 'circle' },
             spark: { count: 6, speed: [2, 5], angle: [0, Math.PI * 2],
                 life: [4, 10], size: [1, 1], colors: ['#FFFFFF','#FFEE44'],
                 gravity: 0, friction: 0.92, type: 'line' },
@@ -47,9 +47,15 @@ PR.Particles = {
             stamp_burst: { count: 12, speed: [1.5, 3], angle: [0, Math.PI * 2],
                 life: [10, 20], size: [1, 2], colors: ['#CC0000','#FF0000','#880000','#FFFFFF'],
                 gravity: 0.08, friction: 0.95, type: 'rect', rotSpeed: 0.3 },
-            delivery: { count: 20, speed: [1, 4], angle: [0, Math.PI * 2],
-                life: [30, 60], size: [2, 4], colors: ['#FFD700','#FF6600','#FFFFFF','#CC2200'],
-                gravity: 0.05, friction: 0.97, type: 'rect', rotSpeed: 0.15 }
+            delivery: { count: 30, speed: [1.5, 5], angle: [0, Math.PI * 2],
+                life: [40, 80], size: [2, 5], colors: ['#FFD700','#FF6600','#FFFFFF','#CC2200','#FFEE44'],
+                gravity: 0.04, friction: 0.97, type: 'rect', rotSpeed: 0.2 },
+            feather: { count: 6, speed: [0.5, 2], angle: [-Math.PI, 0],
+                life: [30, 50], size: [1, 2], colors: ['#1A1A1A','#E8E8E8','#444444'],
+                gravity: 0.02, friction: 0.99, type: 'rect', rotSpeed: 0.1 },
+            blood_spark: { count: 8, speed: [1.5, 3], angle: [0, Math.PI * 2],
+                life: [8, 16], size: [1, 2], colors: ['#FF2200','#CC0000','#FF4400'],
+                gravity: 0.1, friction: 0.95, type: 'circle' }
         };
 
         var p = presets[preset];
@@ -82,16 +88,17 @@ PR.Particles = {
         var part = this._getParticle();
         if (!part) return;
         part.alive = true;
-        part.x = x;
+        part.x = x + PR.Utils.randInt(-4, 4);
         part.y = y;
-        part.vx = 0;
-        part.vy = -0.5;
-        part.life = 50;
-        part.maxLife = 50;
-        part.size = 1;
-        part.color = '#FFD700';
-        part.gravity = 0;
-        part.friction = 1;
+        part.vx = PR.Utils.randFloat(-0.3, 0.3);
+        part.vy = -1.2;
+        part.life = 60;
+        part.maxLife = 60;
+        // Bigger scores = bigger text
+        part.size = score >= 2000 ? 2 : score >= 500 ? 1.5 : 1;
+        part.color = score >= 2000 ? '#FF4400' : score >= 500 ? '#FFEE44' : '#FFD700';
+        part.gravity = 0.01;
+        part.friction = 0.98;
         part.type = 'score';
         part.score = score;
     },

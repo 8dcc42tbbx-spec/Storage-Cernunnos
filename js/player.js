@@ -1,16 +1,16 @@
-// Postie Run - Player (Ernie the Postie)
+// Postie Run - Player (Ernie the Postie) - Enhanced with dodge roll, grenades, coyote time
 PR.Player = {
     x: 40, y: 0, w: 12, h: 22,
     vx: 0, vy: 0,
     facing: 1,
     grounded: false,
-    state: 'idle', // idle, run, jump, fall, crouch, shoot, hurt, dead, driving
+    state: 'idle',
     lives: 3,
     health: 5,
     maxHealth: 5,
     score: 0,
-    weapon: 0, // PR.CONST.WEAPON_PARCEL
-    ammo: -1, // -1 = infinite
+    weapon: 0,
+    ammo: -1,
     continues: 3,
     invTimer: 0,
     shootTimer: 0,
@@ -26,12 +26,32 @@ PR.Player = {
     combo: 0,
     comboTimer: 0,
 
+    // === NEW SYSTEMS ===
+    rolling: false,
+    rollTimer: 0,
+    rollCooldown: 0,
+    rollDir: 1,
+    tapTimer: 0,
+    lastTapDir: 0,
+
+    grenades: 3,
+
+    coyoteTimer: 0,    // frames since leaving ground
+    jumpBuffer: 0,     // frames since jump was pressed
+
+    wasGrounded: false,
+    landingVy: 0,
+
+    edvBoostTimer: 0,
+    killCount: 0,
+
     init: function() {
         this.lives = PR.CONST.PLAYER_LIVES;
         this.continues = PR.CONST.CONTINUES;
         this.score = 0;
         this.weapon = PR.CONST.WEAPON_PARCEL;
         this.ammo = -1;
+        this.killCount = 0;
         this.respawn();
     },
 
@@ -50,6 +70,14 @@ PR.Player = {
         this.hurtTimer = 0;
         this.deadTimer = 0;
         this.facing = 1;
+        this.rolling = false;
+        this.rollTimer = 0;
+        this.rollCooldown = 0;
+        this.grenades = 3;
+        this.coyoteTimer = 0;
+        this.jumpBuffer = 0;
+        this.wasGrounded = false;
+        this.edvBoostTimer = 0;
     },
 
     update: function() {
@@ -64,7 +92,6 @@ PR.Player = {
                 if (this.lives > 0) {
                     this.respawn();
                 }
-                // game.js handles game over check
             }
             return;
         }
@@ -77,16 +104,49 @@ PR.Player = {
             this.y += this.vy;
             this.x += this.vx;
             this.vx *= 0.9;
-            // Resolve tile collision
             this._resolveTiles();
             return;
         }
 
         if (this.invTimer > 0) this.invTimer--;
         if (this.shootTimer > 0) this.shootTimer--;
+        if (this.rollCooldown > 0) this.rollCooldown--;
+        if (this.edvBoostTimer > 0) this.edvBoostTimer--;
         if (this.comboTimer > 0) {
             this.comboTimer--;
             if (this.comboTimer <= 0) this.combo = 0;
+        }
+
+        // Coyote time: allow jump for 6 frames after leaving ground
+        if (this.grounded) {
+            this.coyoteTimer = 6;
+        } else if (this.coyoteTimer > 0) {
+            this.coyoteTimer--;
+        }
+
+        // Jump buffer
+        if (this.jumpBuffer > 0) this.jumpBuffer--;
+
+        // === DODGE ROLL ===
+        if (this.rolling) {
+            this.rollTimer--;
+            this.vx = this.rollDir * 4.5;
+            this.invTimer = Math.max(this.invTimer, 2);
+            if (this.rollTimer <= 0) {
+                this.rolling = false;
+                this.rollCooldown = 20;
+                PR.Particles.emit(this.x + this.w / 2, this.y + this.h, 'dust');
+            }
+            // Still apply gravity and tiles during roll
+            this.vy += PR.CONST.GRAVITY;
+            if (this.vy > PR.CONST.MAX_FALL) this.vy = PR.CONST.MAX_FALL;
+            this.x += this.vx;
+            this.y += this.vy;
+            this._resolveTiles();
+            this._clampToBounds();
+            this.state = 'crouch';
+            this._updateAnim();
+            return;
         }
 
         // Vehicle timer
@@ -99,22 +159,59 @@ PR.Player = {
 
         var speed = this.inVehicle ? PR.CONST.EDV_SPEED : PR.CONST.PLAYER_SPEED;
 
-        // Movement
+        // eDV boost
+        if (this.inVehicle && this.edvBoostTimer <= 0 && input.justPressed('jump')) {
+            speed *= 2;
+            this.edvBoostTimer = 180; // 3 second cooldown
+            PR.Particles.emit(this.x, this.y + this.h, 'dust');
+            PR.Camera.shake(2, 8);
+        }
+
+        // eDV horn
+        if (this.inVehicle && input.justPressed('special')) {
+            PR.Audio.play('van_horn');
+        }
+
+        // Movement with speed ramp
         if (input.actions.left) {
-            this.vx = -speed;
+            this.vx = PR.Utils.lerp(this.vx, -speed, 0.3);
             this.facing = -1;
         } else if (input.actions.right) {
-            this.vx = speed;
+            this.vx = PR.Utils.lerp(this.vx, speed, 0.3);
             this.facing = 1;
         } else {
             this.vx *= PR.CONST.FRICTION;
             if (Math.abs(this.vx) < 0.1) this.vx = 0;
         }
 
-        // Jump
-        if (input.justPressed('jump') && this.grounded) {
+        // Double-tap dodge roll detection
+        if (!this.inVehicle && this.rollCooldown <= 0) {
+            if (input.justPressed('left') || input.justPressed('right')) {
+                // Actually check via actions since we don't have justPressed for directions
+                // Use down+jump for dodge roll instead (more reliable)
+            }
+            if (input.actions.down && input.justPressed('jump') && this.grounded) {
+                this.rolling = true;
+                this.rollTimer = 15;
+                this.rollDir = this.facing;
+                this.invTimer = 15;
+                PR.Particles.emit(this.x + this.w / 2, this.y + this.h, 'dust');
+                PR.Audio.play('jump');
+                return;
+            }
+        }
+
+        // Jump with jump buffer
+        if (input.justPressed('jump')) {
+            this.jumpBuffer = 6;
+        }
+
+        var canJump = this.grounded || this.coyoteTimer > 0;
+        if (this.jumpBuffer > 0 && canJump && !this.inVehicle) {
             this.vy = PR.CONST.PLAYER_JUMP;
             this.grounded = false;
+            this.coyoteTimer = 0;
+            this.jumpBuffer = 0;
             PR.Audio.play('jump');
             PR.Particles.emit(this.x + this.w / 2, this.y + this.h, 'dust');
         }
@@ -125,16 +222,25 @@ PR.Player = {
         }
 
         // Crouch
-        var crouching = input.actions.down && this.grounded;
+        var crouching = input.actions.down && this.grounded && !this.inVehicle;
 
         // Shoot
         if (input.actions.shoot && this.shootTimer <= 0) {
             this.shoot();
         }
 
+        // Grenade (special key, not in vehicle)
+        if (!this.inVehicle && input.justPressed('special') && this.grenades > 0) {
+            this._throwGrenade();
+        }
+
         // Gravity
         this.vy += PR.CONST.GRAVITY;
         if (this.vy > PR.CONST.MAX_FALL) this.vy = PR.CONST.MAX_FALL;
+
+        // Track pre-landing velocity
+        this.landingVy = this.vy;
+        this.wasGrounded = this.grounded;
 
         // Apply velocity
         this.x += this.vx;
@@ -142,10 +248,23 @@ PR.Player = {
 
         // Resolve tile collisions
         this._resolveTiles();
+        this._clampToBounds();
 
-        // Clamp to level bounds
-        if (this.x < PR.Camera.x - 8) this.x = PR.Camera.x - 8;
-        if (this.x > PR.Camera.levelWidth - this.w) this.x = PR.Camera.levelWidth - this.w;
+        // Landing impact
+        if (this.grounded && !this.wasGrounded && this.landingVy > 3.5) {
+            PR.Particles.emit(this.x + this.w / 2, this.y + this.h, 'dust');
+            if (this.landingVy > 5) PR.Camera.shake(1, 3);
+        }
+
+        // Running particles
+        if (this.grounded && Math.abs(this.vx) > 1 && this.frameCount % 12 === 0) {
+            PR.Particles.emit(this.x + this.w / 2, this.y + this.h, 'dust');
+        }
+
+        // eDV smoke
+        if (this.inVehicle && this.animTimer % 8 === 0) {
+            PR.Particles.emit(this.x, this.y + this.h - 2, 'smoke');
+        }
 
         // Update state
         if (crouching) {
@@ -160,12 +279,20 @@ PR.Player = {
             this.state = 'idle';
         }
 
-        // Animation
+        this._updateAnim();
+    },
+
+    _updateAnim: function() {
         this.animTimer++;
         if (this.animTimer >= 6) {
             this.animTimer = 0;
             this.animFrame++;
         }
+    },
+
+    _clampToBounds: function() {
+        if (this.x < PR.Camera.x - 8) this.x = PR.Camera.x - 8;
+        if (this.x > PR.Camera.levelWidth - this.w) this.x = PR.Camera.levelWidth - this.w;
     },
 
     _resolveTiles: function() {
@@ -180,7 +307,6 @@ PR.Player = {
         var right = this.x + this.w - 2;
 
         if (this.vy >= 0) {
-            // Falling - check below
             var tileY = Math.floor(bottom / PR.CONST.TILE_SIZE);
             var tileL = Math.floor(left / PR.CONST.TILE_SIZE);
             var tileR = Math.floor(right / PR.CONST.TILE_SIZE);
@@ -193,7 +319,6 @@ PR.Player = {
                 }
             }
         } else {
-            // Rising - check above
             var tileYt = Math.floor(top / PR.CONST.TILE_SIZE);
             var tileLt = Math.floor(left / PR.CONST.TILE_SIZE);
             var tileRt = Math.floor(right / PR.CONST.TILE_SIZE);
@@ -241,9 +366,7 @@ PR.Player = {
         var projY = this.y + 8;
         var weapon = this.weapon;
 
-        if (this.state === 'crouch') {
-            projY = this.y + 14;
-        }
+        if (this.state === 'crouch') projY = this.y + 14;
 
         switch (weapon) {
             case PR.CONST.WEAPON_PARCEL:
@@ -255,10 +378,14 @@ PR.Player = {
                 PR.Projectiles.spawn(projX, projY, this.facing * PR.CONST.PROJ_CANNON_SPEED, 0, 'cannon', 2);
                 this.shootCooldown = 6;
                 PR.Audio.play('cannon');
+                // Recoil
+                this.vx -= this.facing * 0.8;
+                PR.Camera.shake(1, 4);
                 break;
             case PR.CONST.WEAPON_SPRAY:
                 for (var i = -1; i <= 1; i++) {
-                    PR.Projectiles.spawn(projX, projY, this.facing * PR.CONST.PROJ_SPRAY_SPEED, i * 1.2, 'letter', 1);
+                    var spreadY = i * 1.2 + PR.Utils.randFloat(-0.3, 0.3);
+                    PR.Projectiles.spawn(projX, projY, this.facing * PR.CONST.PROJ_SPRAY_SPEED, spreadY, 'letter', 1);
                 }
                 this.shootCooldown = 10;
                 PR.Audio.play('spray');
@@ -271,9 +398,9 @@ PR.Player = {
                 break;
         }
 
-        this.shootTimer = this.shootCooldown;
+        // Slight randomization for organic feel
+        this.shootTimer = this.shootCooldown + PR.Utils.randInt(-1, 1);
 
-        // Consume ammo
         if (this.ammo > 0) {
             this.ammo--;
             if (this.ammo <= 0) {
@@ -283,15 +410,21 @@ PR.Player = {
         }
     },
 
+    _throwGrenade: function() {
+        this.grenades--;
+        var gx = this.facing > 0 ? this.x + this.w : this.x - 6;
+        var gy = this.y + 4;
+        PR.Projectiles.spawn(gx, gy, this.facing * 3, -3, 'grenade', 3);
+        PR.Audio.play('cannon');
+    },
+
     takeDamage: function(amount) {
         if (this.invTimer > 0) return;
         if (this.inVehicle) {
             this.vehicleHealth -= amount;
             PR.Camera.shake(2, 6);
             PR.Audio.play('hit');
-            if (this.vehicleHealth <= 0) {
-                this.exitVehicle();
-            }
+            if (this.vehicleHealth <= 0) this.exitVehicle();
             return;
         }
 
@@ -303,9 +436,7 @@ PR.Player = {
         PR.Camera.shake(4, 12);
         PR.Audio.play('hit');
 
-        if (this.health <= 0) {
-            this.die();
-        }
+        if (this.health <= 0) this.die();
     },
 
     die: function() {
@@ -315,6 +446,7 @@ PR.Player = {
         this.deadTimer = 0;
         PR.Audio.play('death');
         PR.Camera.shake(6, 20);
+        if (PR.Game) PR.Game.flash('#FF0000', 0.5);
     },
 
     enterVehicle: function() {
@@ -323,7 +455,9 @@ PR.Player = {
         this.vehicleHealth = PR.CONST.EDV_HP;
         this.w = 32;
         this.h = 20;
+        this.edvBoostTimer = 0;
         PR.Audio.play('pickup_edv');
+        PR.Camera.shake(2, 6);
     },
 
     exitVehicle: function() {
@@ -335,19 +469,26 @@ PR.Player = {
         PR.Particles.emit(this.x + 16, this.y + 10, 'explosion');
         PR.Camera.shake(5, 15);
         PR.Audio.play('explosion');
+        if (PR.Game) PR.Game.flash('#FFFFFF', 0.4);
     },
 
     addScore: function(points) {
         this.combo++;
         this.comboTimer = 120;
+        this.killCount++;
         var multiplier = Math.min(this.combo, 5);
         var total = points * multiplier;
         this.score += total;
         PR.Particles.emitScore(this.x, this.y - 8, total);
+
+        // Hitstop on kills
+        if (PR.Game) {
+            PR.Game.hitstop(3);
+            if (this.combo >= 3) PR.Game.flash('#FFFFFF', 0.15);
+        }
     },
 
     render: function(ctx) {
-        // Invincibility flash
         if (this.invTimer > 0 && Math.floor(this.invTimer / 3) % 2 === 0) return;
 
         var spriteKey;
@@ -389,10 +530,26 @@ PR.Player = {
         }
 
         // Draw with offset to center sprite on hitbox
-        PR.SpriteCache.draw(ctx, spriteKey, Math.round(this.x - 2), Math.round(this.y - 2), flipX);
+        var drawX = Math.round(this.x - 2);
+        var drawY = Math.round(this.y - 2);
+
+        // Roll spin effect
+        if (this.rolling) {
+            ctx.save();
+            ctx.translate(drawX + 8, drawY + 12);
+            ctx.rotate(this.rollTimer * 0.4 * this.rollDir);
+            ctx.translate(-8, -12);
+            PR.SpriteCache.draw(ctx, spriteKey, 0, 0, flipX);
+            ctx.restore();
+        } else {
+            PR.SpriteCache.draw(ctx, spriteKey, drawX, drawY, flipX);
+        }
     },
 
     getBounds: function() {
         return { x: this.x, y: this.y, w: this.w, h: this.h };
-    }
+    },
+
+    // frameCount proxy
+    get frameCount() { return PR.Game ? PR.Game.frameCount : 0; }
 };

@@ -82,7 +82,7 @@ PR.Input = {
 
     // True only on the frame the action first becomes true
     justPressed: function(action) {
-        return this.actions[action] && !this.prev[action];
+        return this.actions && this.actions[action] && this.prev && !this.prev[action];
     },
 
     actions: {
