@@ -17,7 +17,10 @@ CY.Images = (function () {
         var entry = { img: img, ready: false, failed: false };
         img.onload = function () { entry.ready = true; };
         img.onerror = function () { entry.failed = true; };
-        img.src = 'assets/' + key + '.png';
+        // CY.ASSET_DATA is only defined in the single-file build, where the
+        // artwork is inlined as data URIs because the page can't fetch
+        // sibling files. Normally this just loads from assets/.
+        img.src = (window.CY && CY.ASSET_DATA && CY.ASSET_DATA[key]) || ('assets/' + key + '.png');
         store[key] = entry;
     });
 
