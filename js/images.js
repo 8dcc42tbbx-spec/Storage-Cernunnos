@@ -41,18 +41,19 @@ CY.Images = (function () {
             return false;
         },
 
-        // Fits the whole image inside the rect, centred, cropping nothing.
-        // Use where losing any part of the image matters more than filling
-        // the space -- the caller is responsible for what shows behind it.
+        // Fits the whole image inside the rect, centred, cropping nothing --
+        // the image is shrunk until it fits. Returns the rect it actually
+        // occupied (so the caller can frame it), or null if not loaded.
         drawContain: function (ctx, key, dx, dy, dw, dh) {
             var e = store[key];
-            if (!e || !e.ready) return false;
+            if (!e || !e.ready) return null;
             var iw = e.img.naturalWidth, ih = e.img.naturalHeight;
-            if (!iw || !ih) return false;
+            if (!iw || !ih) return null;
             var scale = Math.min(dw / iw, dh / ih);
             var w = Math.round(iw * scale), h = Math.round(ih * scale);
-            ctx.drawImage(e.img, Math.round(dx + (dw - w) / 2), Math.round(dy + (dh - h) / 2), w, h);
-            return true;
+            var x = Math.round(dx + (dw - w) / 2), y = Math.round(dy + (dh - h) / 2);
+            ctx.drawImage(e.img, x, y, w, h);
+            return { x: x, y: y, w: w, h: h };
         },
 
         // Fills the rect while preserving the image's aspect, centre-cropping

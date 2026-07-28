@@ -16,6 +16,16 @@ CY.UI = {};
         rect(ctx, x + 3, y + 3, w - 6, h - 6, C.parchment);
     };
 
+    // Stone frame around a portrait, so the space either side of a shrunk
+    // image reads as a deliberate frame rather than leftover gap.
+    CY.UI.drawFrame = function (ctx, r) {
+        if (!r) return;
+        rect(ctx, r.x - 2, r.y - 2, r.w + 4, 2, C.caveHi);
+        rect(ctx, r.x - 2, r.y - 2, 2, r.h + 4, C.caveHi);
+        rect(ctx, r.x - 2, r.y + r.h, r.w + 4, 2, C.black);
+        rect(ctx, r.x + r.w, r.y - 2, 2, r.h + 4, C.black);
+    };
+
     // Darkens a band of artwork so overlaid text stays readable on top of it.
     CY.UI.drawScrim = function (ctx, x, y, w, h, alpha) {
         ctx.save();
