@@ -34,7 +34,9 @@ CY.UI = {};
         ctx.restore();
     };
 
-    CY.UI.drawHUD = function (ctx, riddleIndex, total, escapeScore, hint) {
+    // `hintIsButton` draws the hint as a clickable chip -- used for NO ANSWER,
+    // which is the one action during a question that isn't an answer row.
+    CY.UI.drawHUD = function (ctx, riddleIndex, total, escapeScore, hint, hintIsButton) {
         rect(ctx, 0, 0, CY.WIDTH, 14, C.black);
         CY.drawText(ctx, 'RIDDLE ' + riddleIndex + '/' + total, 4, 4, 1, C.gold);
         // boulder meter, right-aligned
@@ -44,7 +46,11 @@ CY.UI = {};
         }
         if (hint) {
             var w = CY.textWidth(hint, 1);
-            CY.drawText(ctx, hint, CY.WIDTH / 2 - w / 2, 4, 1, C.parchmentDark);
+            if (hintIsButton) {
+                rect(ctx, CY.WIDTH / 2 - w / 2 - 5, 2, w + 10, 11, C.caveMid);
+                rect(ctx, CY.WIDTH / 2 - w / 2 - 5, 2, w + 10, 1, C.caveHi);
+            }
+            CY.drawText(ctx, hint, CY.WIDTH / 2 - w / 2, 4, 1, hintIsButton ? C.parchment : C.parchmentDark);
         }
     };
 
@@ -64,24 +70,30 @@ CY.UI = {};
 
     // options: array of 4 strings. On reveal the correct row turns green; if the
     // room's pick was wrong, that row turns red so the miss is obvious at a glance.
-    CY.UI.drawOptions = function (ctx, x, y, w, options, correctIndex, revealed, pickedIndex) {
+    CY.UI.drawOptions = function (ctx, x, y, w, options, correctIndex, revealed, pickedIndex, hoverIndex) {
         var letters = ['A', 'B', 'C', 'D'];
-        var rowH = 13;
+        var rowH = CY.UI.OPTION_ROW_H;
         for (var i = 0; i < options.length; i++) {
             var ry = y + i * rowH;
             var isCorrect = revealed && i === correctIndex;
             var isWrongPick = revealed && pickedIndex === i && i !== correctIndex;
-            var bg = isCorrect ? C.green : (isWrongPick ? C.red : C.parchment);
-            var tab = isCorrect ? '#2c7a44' : (isWrongPick ? '#8a2020' : C.caveHi);
+            var isHover = !revealed && i === hoverIndex;
+            var bg = isCorrect ? C.green : (isWrongPick ? C.red : (isHover ? '#fff6d8' : C.parchment));
+            var tab = isCorrect ? '#2c7a44' : (isWrongPick ? '#8a2020' : (isHover ? C.gold : C.caveHi));
             var fg = (isCorrect || isWrongPick) ? C.white : C.ink;
             rect(ctx, x, ry, w, rowH - 2, bg);
             rect(ctx, x, ry, 14, rowH - 2, tab);
-            CY.drawText(ctx, letters[i], x + 4, ry + 3, 1, C.white);
+            CY.drawText(ctx, letters[i], x + 4, ry + 3, 1, isHover ? C.ink : C.white);
             CY.drawText(ctx, options[i], x + 18, ry + 3, 1, fg);
             if (isCorrect) CY.drawText(ctx, '*', x + w - 10, ry + 3, 1, C.white);
             else if (isWrongPick) CY.drawText(ctx, 'X', x + w - 10, ry + 3, 1, C.white);
         }
     };
+    // Shared by the renderer and the click hit-test so they can't drift apart.
+    CY.UI.OPTION_ROW_H = 13;
+    CY.UI.OPTION_X = 12;
+    CY.UI.OPTION_Y = 183;
+    CY.UI.OPTION_W = CY.WIDTH - 24;
 
     CY.UI.drawBlinkPrompt = function (ctx, text, cx, y, t, scale, color) {
         if (Math.floor(t / 500) % 2 === 0) {

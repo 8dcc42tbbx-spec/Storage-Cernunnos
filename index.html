@@ -8,32 +8,23 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             width: 100%;
-            min-height: 100%;
+            height: 100%;
             background: #000000;
-            overflow-x: hidden;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-family: monospace;
-        }
-        #stage {
-            position: relative;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
         }
+        /* The canvas is the entire interface -- answers are clicked directly on
+           it. No HTML controls, so every pixel of the window goes to the game. */
+        #stage { position: relative; line-height: 0; }
         canvas {
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             image-rendering: -moz-crisp-edges;
-            /* Display size is set in JS to an integer multiple of 320x240 so
-               pixels stay perfectly square; these caps are only a floor-case
-               safety for viewports narrower than the native resolution. */
-            max-width: 100vw;
-            max-height: 100vh;
-            border: 2px solid #3a2a18;
+            display: block;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         #scanlines {
             position: absolute;
@@ -48,103 +39,13 @@
                 rgba(0,0,0,0.06) 4px
             );
         }
-        #legend {
-            color: #d9c290;
-            font-size: 13px;
-            letter-spacing: 1px;
-            text-align: center;
-            padding: 10px 6px 4px;
-            line-height: 1.6;
-        }
-        #legend b { color: #ffcc33; }
-        #legend .hint { color: #7a6a4e; font-size: 11px; }
-
-        /* On-screen host controls -- desktop uses the keyboard, but a
-           host running this from a tablet needs tappable buttons too. */
-        #controls {
-            width: 100%;
-            max-width: 420px;
-            padding: 6px 12px 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .ctrl-row { display: flex; gap: 8px; }
-        .ctrl-btn {
-            font-family: monospace;
-            font-weight: bold;
-            letter-spacing: 1px;
-            font-size: 13px;
-            padding: 14px 8px;
-            border: none;
-            border-radius: 2px;
-            cursor: pointer;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-            box-shadow: inset -3px -3px 0 rgba(0,0,0,0.35), inset 3px 3px 0 rgba(255,255,255,0.18);
-        }
-        .ctrl-btn:active { box-shadow: inset 2px 2px 0 rgba(0,0,0,0.35); transform: translateY(1px); }
-        .ctrl-advance { width: 100%; background: #7a5c3e; color: #f2e2b6; }
-        .ctrl-pick { flex: 1; background: #4a5a7a; color: #f6f2e6; font-size: 16px; padding: 16px 4px; }
-        .ctrl-fs { background: #3a2a18; color: #d9c290; font-size: 11px; padding: 8px; width: 100%; }
-
-        #app {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
-
-        /* Presentation mode: the room should see the game, not the host's
-           controls. Native fullscreen can be refused inside an iframe, so the
-           same class also does the work on its own as a CSS-only cinema mode. */
-        #app.cinema {
-            position: fixed;
-            inset: 0;
-            background: #000;
-            justify-content: center;
-            z-index: 50;
-        }
-        #app.cinema canvas { max-height: 100vh; max-width: 100vw; border: none; }
-        #app.cinema #chrome {
-            position: fixed;
-            left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.88);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #app.cinema.show-chrome #chrome { opacity: 1; pointer-events: auto; }
     </style>
 </head>
 <body>
-  <div id="app">
     <div id="stage">
         <canvas id="game" width="320" height="240"></canvas>
         <div id="scanlines"></div>
     </div>
-    <div id="chrome">
-        <div id="legend">
-            HOST CONTROLS &mdash; <b>A B C D</b>: lock in the guess &nbsp;|&nbsp;
-            <b>SPACE</b>: advance / no answer
-            <div class="hint">(A B C D or 1 2 3 4 &nbsp;&middot;&nbsp; <b>F</b> fullscreen &nbsp;&middot;&nbsp; <b>M</b> mute &nbsp;&middot;&nbsp; or tap the buttons below)</div>
-        </div>
-        <div id="controls">
-            <div class="ctrl-row">
-                <button id="btnA" class="ctrl-btn ctrl-pick" type="button">A</button>
-                <button id="btnB" class="ctrl-btn ctrl-pick" type="button">B</button>
-                <button id="btnC" class="ctrl-btn ctrl-pick" type="button">C</button>
-                <button id="btnD" class="ctrl-btn ctrl-pick" type="button">D</button>
-            </div>
-            <button id="btnAdvance" class="ctrl-btn ctrl-advance" type="button">&#9654; ADVANCE / NO ANSWER</button>
-            <button id="btnFs" class="ctrl-btn ctrl-fs" type="button">&#9974; FULLSCREEN (F)</button>
-        </div>
-    </div>
-  </div>
 
     <script src="js/constants.js"></script>
     <script src="js/pixelfont.js"></script>
@@ -161,23 +62,14 @@
             var canvas = document.getElementById('game');
             CY.Game.init(canvas);
 
-            document.getElementById('btnAdvance').addEventListener('click', function () { CY.Game.action('ADVANCE'); });
-            ['A', 'B', 'C', 'D'].forEach(function (letter) {
-                document.getElementById('btn' + letter).addEventListener('click', function () { CY.Game.action(letter); });
-            });
-
-            // ---- canvas scaling ----
-            // The canvas is natively 320x240; without this it renders at that
-            // size no matter how big the screen is, which on a projector leaves
-            // a postage stamp in the middle. Scale by whole numbers only, so
-            // every game pixel stays a crisp square block.
-            var app = document.getElementById('app');
-            var chromeEl = document.getElementById('chrome');
+            // Scale by whole numbers only, so every game pixel stays a crisp
+            // square. Without this the canvas renders at its native 320x240 no
+            // matter how big the display is.
             function fitCanvas() {
-                var cinema = app.classList.contains('cinema');
-                var availW = window.innerWidth;
-                var availH = window.innerHeight - (cinema ? 0 : chromeEl.offsetHeight + 24);
-                var scale = Math.min(Math.floor(availW / 320), Math.floor(availH / 240));
+                var scale = Math.min(
+                    Math.floor(window.innerWidth / 320),
+                    Math.floor(window.innerHeight / 240)
+                );
                 if (!isFinite(scale) || scale < 1) scale = 1;
                 canvas.style.width = (320 * scale) + 'px';
                 canvas.style.height = (240 * scale) + 'px';
@@ -186,52 +78,41 @@
             window.addEventListener('resize', fitCanvas);
             window.addEventListener('orientationchange', fitCanvas);
 
-            // ---- presentation mode ----
-            var chromeTimer = null;
-
-            // In cinema mode the controls are hidden, so surface them briefly on
-            // any pointer activity -- otherwise a tablet host has no way to play.
-            function flashChrome() {
-                if (!app.classList.contains('cinema')) return;
-                app.classList.add('show-chrome');
-                clearTimeout(chromeTimer);
-                chromeTimer = setTimeout(function () {
-                    app.classList.remove('show-chrome');
-                }, 2600);
+            function toCanvas(e) {
+                var r = canvas.getBoundingClientRect();
+                return {
+                    x: (e.clientX - r.left) * (320 / r.width),
+                    y: (e.clientY - r.top) * (240 / r.height)
+                };
             }
 
             function toggleFullscreen() {
-                var entering = !app.classList.contains('cinema');
-                app.classList.toggle('cinema', entering);
-                app.classList.toggle('show-chrome', entering);
-                fitCanvas();
-                if (entering) flashChrome();
-                // Ask for real fullscreen too, but never depend on it: embedded
-                // in an iframe the request can be rejected, and cinema mode
-                // already gives a clean full-viewport presentation.
                 try {
-                    if (entering && !document.fullscreenElement && app.requestFullscreen) {
-                        app.requestFullscreen().catch(function () {});
-                    } else if (!entering && document.fullscreenElement && document.exitFullscreen) {
+                    if (!document.fullscreenElement) {
+                        if (document.documentElement.requestFullscreen) {
+                            document.documentElement.requestFullscreen().catch(function () {});
+                        }
+                    } else if (document.exitFullscreen) {
                         document.exitFullscreen().catch(function () {});
                     }
-                } catch (e) { /* cinema mode carries it */ }
+                } catch (e) { /* fullscreen unavailable; the page already fills the window */ }
             }
 
-            // Keep cinema mode in step when fullscreen is left via Esc/browser UI.
-            document.addEventListener('fullscreenchange', function () {
-                if (!document.fullscreenElement) {
-                    app.classList.remove('cinema', 'show-chrome');
-                }
-                fitCanvas();
+            canvas.addEventListener('pointermove', function (e) {
+                var p = toCanvas(e);
+                canvas.style.cursor = CY.Game.pointerMove(p.x, p.y) ? 'pointer' : 'default';
             });
 
-            document.getElementById('btnFs').addEventListener('click', toggleFullscreen);
+            canvas.addEventListener('pointerdown', function (e) {
+                e.preventDefault();
+                var p = toCanvas(e);
+                if (CY.Game.pointerClick(p.x, p.y) === 'FULLSCREEN') toggleFullscreen();
+            });
+
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
             });
-            document.addEventListener('pointermove', flashChrome);
-            document.addEventListener('pointerdown', flashChrome);
+            document.addEventListener('fullscreenchange', fitCanvas);
         });
     </script>
 </body>

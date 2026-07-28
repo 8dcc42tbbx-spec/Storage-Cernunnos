@@ -15,6 +15,7 @@ CY.Game = (function () {
     var picked = null;       // the room's locked-in answer for the current riddle
     var lastResult = null;   // 'correct' | 'wrong' | 'none' -- drives the taunt
     var taunt = '';          // chosen once per round, never inside draw()
+    var hoverOption = -1;    // answer row under the cursor, -1 for none
 
     // Portrait framing. The Cyclops is shrunk to fit entirely inside this
     // height above the text rather than cropped to fill it -- the expression
@@ -160,6 +161,37 @@ CY.Game = (function () {
         }
     }
 
+    // ---- pointer input -------------------------------------------------
+    // The whole interface is the canvas: answers are clicked directly rather
+    // than through HTML buttons underneath, which kept stealing vertical space
+    // from the artwork.
+    var NO_ANSWER_BOX = { x: 108, y: 0, w: 104, h: 14 };
+
+    function inBox(b, x, y) {
+        return x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+    }
+
+    function optionAt(x, y) {
+        if (x < CY.UI.OPTION_X || x > CY.UI.OPTION_X + CY.UI.OPTION_W) return -1;
+        for (var i = 0; i < 4; i++) {
+            var ry = CY.UI.OPTION_Y + i * CY.UI.OPTION_ROW_H;
+            if (y >= ry && y < ry + CY.UI.OPTION_ROW_H) return i;
+        }
+        return -1;
+    }
+
+    // Returns the action a click at these canvas coords would take.
+    function hitTest(x, y) {
+        if (state === 'QUESTION') {
+            if (optionAt(x, y) >= 0) return 'PICK';
+            if (inBox(NO_ANSWER_BOX, x, y)) return 'NOANSWER';
+            return null;
+        }
+        if (state === 'TITLE' && y >= 226) return 'FULLSCREEN';
+        return 'ADVANCE';
+    }
+
+    // Keyboard remains a full alternative to the mouse for hosts who prefer it.
     function handleKey(e) {
         var k = e.key;
         if (k === 'm' || k === 'M') { e.preventDefault(); CY.Audio.toggleMute(); return; }
@@ -207,7 +239,11 @@ CY.Game = (function () {
             CY.UI.drawCentered(ctx, 'TRAPPED!', CY.WIDTH / 2, 150, 3, C.gold);
             CY.UI.drawCentered(ctx, 'ODYSSEUS VS THE CYCLOPS', CY.WIDTH / 2, 180, 1, C.white);
             CY.UI.drawCentered(ctx, 'A TRIVIA ESCAPE', CY.WIDTH / 2, 194, 1, C.parchmentDark);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE TO BEGIN', CY.WIDTH / 2, 218, t, 1, C.white);
+            CY.UI.drawBlinkPrompt(ctx, 'CLICK TO BEGIN', CY.WIDTH / 2, 212, t, 1, C.white);
+            // The only chrome left anywhere: a clickable strip so a tablet host
+            // (no keyboard) can still reach fullscreen.
+            CY.UI.drawScrim(ctx, 0, 226, CY.WIDTH, 14, 0.55);
+            CY.UI.drawCentered(ctx, 'FULLSCREEN  (F)   -   M MUTES', CY.WIDTH / 2, 229, 1, C.parchmentDark);
             return;
         }
 
@@ -221,7 +257,7 @@ CY.Game = (function () {
             }
             CY.UI.drawCentered(ctx, (pageIndex + 1) + '/' + CRAWL.length, CY.WIDTH - 22, 140, 1, C.parchmentDark);
             CY.UI.drawDialogue(ctx, 20, 150, CY.WIDTH - 40, 74, CRAWL[pageIndex], 1);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 230, t, 1, C.parchment);
+            CY.UI.drawBlinkPrompt(ctx, 'CLICK TO CONTINUE', CY.WIDTH / 2, 230, t, 1, C.parchment);
             return;
         }
 
@@ -232,7 +268,7 @@ CY.Game = (function () {
             if (introRect) CY.UI.drawFrame(ctx, introRect);
             else CY.Art.drawCyclops(ctx, CY.WIDTH / 2, 20, 1.6, mood, t);
             CY.UI.drawDialogue(ctx, 6, FACE_H + 10, CY.WIDTH - 12, 46, CYCLOPS_INTRO[pageIndex], 1);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 228, t, 1, C.parchment);
+            CY.UI.drawBlinkPrompt(ctx, 'CLICK TO CONTINUE', CY.WIDTH / 2, 228, t, 1, C.parchment);
             return;
         }
 
@@ -248,7 +284,7 @@ CY.Game = (function () {
             // Counter tucks into the gap beside the portrait rather than over it.
             CY.UI.drawCentered(ctx, 'RIDDLE ' + (riddleIndex + 1) + ' OF ' + CY.QUESTIONS.length, CY.WIDTH / 2, FACE_H + 8, 1, C.gold);
             CY.UI.drawDialogue(ctx, 6, FACE_H + 18, CY.WIDTH - 12, 44, taunt, 1);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE', CY.WIDTH / 2, 230, t, 1, C.white);
+            CY.UI.drawBlinkPrompt(ctx, 'CLICK TO CONTINUE', CY.WIDTH / 2, 230, t, 1, C.white);
             return;
         }
 
@@ -277,7 +313,7 @@ CY.Game = (function () {
             }
 
             CY.UI.drawHUD(ctx, riddleIndex + 1, CY.QUESTIONS.length, escapeScore,
-                isRevealed ? 'SPACE = NEXT' : 'PICK A B C D');
+                isRevealed ? 'CLICK TO CONTINUE' : 'NO ANSWER', !isRevealed);
 
             var frac = isRevealed ? 0 : (timeLeftSeconds() / CY.TIMER_SECONDS);
             CY.UI.drawTimerBar(ctx, 4, 133, CY.WIDTH - 8, 5, frac);
@@ -292,10 +328,11 @@ CY.Game = (function () {
             } else {
                 CY.drawTextBlock(ctx, cur.question, 12, 147, 1, C.ink, CY.WIDTH - 24, 3);
             }
-            CY.UI.drawOptions(ctx, 12, 183, CY.WIDTH - 24, cur.options, cur.correct, isRevealed, picked);
+            CY.UI.drawOptions(ctx, CY.UI.OPTION_X, CY.UI.OPTION_Y, CY.UI.OPTION_W,
+                cur.options, cur.correct, isRevealed, picked, hoverOption);
 
             if (state === 'QUESTION' && timeLeftSeconds() <= 0) {
-                CY.UI.drawBlinkPrompt(ctx, "TIME'S UP! PICK OR PRESS SPACE", CY.WIDTH / 2, 236, t, 1, C.red);
+                CY.UI.drawBlinkPrompt(ctx, "TIME'S UP! PICK AN ANSWER", CY.WIDTH / 2, 236, t, 1, C.red);
             }
             return;
         }
@@ -319,7 +356,7 @@ CY.Game = (function () {
                 CY.UI.drawCentered(ctx, head, CY.WIDTH / 2, 196, 1, tier === 'caught' ? C.red : C.gold);
             }
             CY.UI.drawCentered(ctx, 'FINAL SCORE: ' + escapeScore + ' / ' + CY.QUESTIONS.length, CY.WIDTH / 2, 212, 1, C.parchment);
-            CY.UI.drawBlinkPrompt(ctx, 'PRESS SPACE TO PLAY AGAIN', CY.WIDTH / 2, 228, t, 1, C.white);
+            CY.UI.drawBlinkPrompt(ctx, 'CLICK TO PLAY AGAIN', CY.WIDTH / 2, 228, t, 1, C.white);
             return;
         }
     }
@@ -331,9 +368,25 @@ CY.Game = (function () {
     }
 
     return {
-        // For on-screen touch controls: CY.Game.action('ADVANCE' | 'A' | 'B' | 'C' | 'D')
         action: function (a) { dispatch(a); },
         toggleMute: function () { return CY.Audio.toggleMute(); },
+
+        // Canvas-space pointer input. Returns true when the point is
+        // clickable, so the host page can set the cursor.
+        pointerMove: function (x, y) {
+            hoverOption = state === 'QUESTION' ? optionAt(x, y) : -1;
+            return hitTest(x, y) !== null;
+        },
+        // Returns 'FULLSCREEN' when the caller should request fullscreen --
+        // that has to happen inside the original gesture, so it can't be
+        // done from in here.
+        pointerClick: function (x, y) {
+            var hit = hitTest(x, y);
+            if (hit === 'PICK') { dispatch(['A', 'B', 'C', 'D'][optionAt(x, y)]); return null; }
+            if (hit === 'NOANSWER' || hit === 'ADVANCE') { dispatch('ADVANCE'); return null; }
+            if (hit === 'FULLSCREEN') { CY.Audio.unlock(); return 'FULLSCREEN'; }
+            return null;
+        },
         init: function (canvasEl) {
             canvas = canvasEl;
             ctx = canvas.getContext('2d');
