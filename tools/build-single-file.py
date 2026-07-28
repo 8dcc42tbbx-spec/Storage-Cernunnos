@@ -26,14 +26,29 @@ def main():
     srcs = re.findall(r'<script src="([^"]+)"></script>', html)
 
     # Artwork first, so images.js sees CY.ASSET_DATA when it runs.
+    # Base64 inflates by ~37%, so the artwork is re-encoded to WebP where
+    # Pillow is available -- visually identical at these sizes but less than
+    # half the bytes, which keeps the single file comfortably embeddable.
+    try:
+        from PIL import Image
+        import io
+    except ImportError:
+        Image = None
+
     assets = {}
     asset_dir = os.path.join(ROOT, 'assets')
     for name in sorted(os.listdir(asset_dir)):
         if not name.endswith('.png'):
             continue
-        with open(os.path.join(asset_dir, name), 'rb') as fh:
-            b64 = base64.b64encode(fh.read()).decode('ascii')
-        assets[name[:-4]] = 'data:image/png;base64,' + b64
+        path = os.path.join(asset_dir, name)
+        if Image is not None:
+            buf = io.BytesIO()
+            Image.open(path).convert('RGB').save(buf, 'WEBP', quality=90, method=6)
+            raw, mime = buf.getvalue(), 'image/webp'
+        else:
+            raw, mime = open(path, 'rb').read(), 'image/png'
+        b64 = base64.b64encode(raw).decode('ascii')
+        assets[name[:-4]] = 'data:%s;base64,%s' % (mime, b64)
 
     parts = [style, body, '<script>', 'var CY = CY || {};', 'CY.ASSET_DATA = {']
     parts += ['  %s: "%s",' % (k, v) for k, v in assets.items()]
