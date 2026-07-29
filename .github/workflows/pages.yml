@@ -1,0 +1,49 @@
+name: Deploy game to GitHub Pages
+
+# Publishes the game to a public URL so it can be shared with a room of
+# people without anyone needing repo access.
+
+on:
+  push:
+    branches: [claude/cyclops-trivia-game-pxbdxz]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      # Copy only what the game needs, so the published site doesn't carry
+      # the build tooling or prompt notes.
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          cp index.html site/
+          cp -r js site/
+          cp -r assets site/
+          rm -f site/assets/README.md
+          ls -la site site/assets | head -30
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
