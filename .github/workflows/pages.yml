@@ -1,7 +1,9 @@
-name: Deploy game to GitHub Pages
+name: Publish to GitHub Pages
 
-# Publishes the game to a public URL so it can be shared with a room of
-# people without anyone needing repo access.
+# Keeps the public site in sync with this branch. Pages is served from the
+# gh-pages branch, so this just rebuilds that branch's contents -- it needs
+# only contents:write, not the Pages admin API (which the workflow token
+# isn't allowed to call).
 
 on:
   push:
@@ -9,29 +11,19 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: publish-pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      # Copy only what the game needs, so the published site doesn't carry
-      # the build tooling or prompt notes.
+      # Only what the game needs -- no build tooling or prompt notes.
       - name: Assemble site
         run: |
           mkdir -p site
@@ -39,11 +31,16 @@ jobs:
           cp -r js site/
           cp -r assets site/
           rm -f site/assets/README.md
-          ls -la site site/assets | head -30
+          touch site/.nojekyll
 
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Push to gh-pages
+        run: |
+          cd site
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Publish ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
