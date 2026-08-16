@@ -89,54 +89,9 @@ TT.Assets = {
 };
 
 // ---------------------------------------------------------------
-// Audio - tiny WebAudio sting generator, no external files needed.
+// Audio lives in js/audio.js (2-operator FM chiptune engine), loaded
+// before this file so TT.Audio is already defined by the time we get here.
 // ---------------------------------------------------------------
-TT.Audio = {
-    ctx: null,
-    init: function () {
-        if (this.ctx) return;
-        try {
-            var AC = window.AudioContext || window.webkitAudioContext;
-            this.ctx = new AC();
-        } catch (e) { this.ctx = null; }
-    },
-    _tone: function (freq, start, dur, type, gain) {
-        if (!this.ctx) return;
-        var osc = this.ctx.createOscillator();
-        var g = this.ctx.createGain();
-        osc.type = type || "sine";
-        osc.frequency.value = freq;
-        g.gain.value = 0;
-        osc.connect(g);
-        g.connect(this.ctx.destination);
-        var t0 = this.ctx.currentTime + start;
-        g.gain.setValueAtTime(0, t0);
-        g.gain.linearRampToValueAtTime(gain || 0.15, t0 + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-        osc.start(t0);
-        osc.stop(t0 + dur + 0.02);
-    },
-    click: function () { this._tone(520, 0, 0.08, "triangle", 0.10); },
-    correct: function () {
-        this._tone(660, 0, 0.14, "triangle", 0.16);
-        this._tone(880, 0.10, 0.18, "triangle", 0.16);
-        this._tone(1180, 0.20, 0.22, "triangle", 0.14);
-    },
-    wrong: function () {
-        this._tone(300, 0, 0.16, "sawtooth", 0.12);
-        this._tone(220, 0.10, 0.22, "sawtooth", 0.12);
-    },
-    win: function () {
-        var notes = [523, 659, 784, 1047];
-        for (var i = 0; i < notes.length; i++) {
-            this._tone(notes[i], i * 0.13, 0.28, "triangle", 0.15);
-        }
-    },
-    tryAgain: function () {
-        this._tone(392, 0, 0.18, "sine", 0.12);
-        this._tone(330, 0.16, 0.26, "sine", 0.10);
-    }
-};
 
 // ---------------------------------------------------------------
 // UI - DOM rendering helpers
@@ -264,12 +219,29 @@ TT.Game = {
         var self = this;
         TT.UI.el.btnStart.addEventListener("click", function () { self.startGame(); });
         TT.UI.el.btnAgain.addEventListener("click", function () { self.startGame(); });
+        if (TT.UI.el.btnMute) {
+            TT.UI.el.btnMute.addEventListener("click", function () { self._toggleMute(); });
+        }
 
         document.addEventListener("keydown", function (e) { self._onKey(e); });
+
+        // Browsers block audio until a real user gesture. Queue the title
+        // theme now; TT.Audio starts it the moment the first tap/click lands.
+        TT.Audio.playMusic("title");
+        var unlockAudio = function () {
+            TT.Audio.unlock();
+            window.removeEventListener("pointerdown", unlockAudio);
+        };
+        window.addEventListener("pointerdown", unlockAudio);
+    },
+
+    _toggleMute: function () {
+        var muted = TT.Audio.toggleMute();
+        if (TT.UI.el.btnMute) TT.UI.el.btnMute.textContent = muted ? "🔇" : "🔊";
     },
 
     startGame: function () {
-        TT.Audio.init();
+        TT.Audio.unlock();
         TT.Audio.click();
 
         var chosen = TT.Utils.pickN(TT.QUESTIONS, TT.CONST.QUESTIONS_PER_GAME);
@@ -301,6 +273,7 @@ TT.Game = {
         TT.UI.setScene(TT.Assets.sceneUrl(item.c), TT.UI.categoryGradient[item.c]);
         TT.UI.renderProgress(this.results, this.index, TT.CONST.QUESTIONS_PER_GAME);
         TT.UI.el.scoreNum.textContent = this.results.filter(Boolean).length;
+        TT.Audio.playMusic("question");
 
         var grid = TT.UI.el.answersGrid;
         grid.innerHTML = "";
@@ -323,7 +296,7 @@ TT.Game = {
     _selectAnswer: function (choiceIndex, btnEl) {
         if (this.answered) return;
         this.answered = true;
-        TT.Audio.click();
+        TT.Audio.stopMusic(); // drop the question bed so the verdict sting lands clean
 
         var item = this.set[this.index];
         var correct = choiceIndex === item.answerIndex;
