@@ -1,8 +1,6 @@
-/* Trivia Trixie the Fabulous Fairy - Stylesheet
-   Pixel-font + chiptune-era look, to match the reference game's retro
-   arcade vibe, while staying a plain scrolling page (not a fixed canvas). */
+/* Trivia Trixie the Fabulous Fairy - Stylesheet */
 
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Quicksand:wght@500;600;700&display=swap');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -24,14 +22,11 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    font-family: 'Silkscreen', 'Courier New', monospace;
+    font-family: 'Quicksand', 'Trebuchet MS', sans-serif;
     background: var(--purple-deep);
     color: var(--text-dark);
     -webkit-tap-highlight-color: transparent;
 }
-
-/* Pixel-art assets (once dropped into assets/) should stay crisp, not blurred */
-img { image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges; }
 
 button { font-family: inherit; }
 
@@ -52,7 +47,6 @@ button { font-family: inherit; }
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
     transition: opacity 0.25s ease;
-    image-rendering: pixelated;
     z-index: 0;
 }
 #scene-bg.fading { opacity: 0.25; }
@@ -102,38 +96,25 @@ button { font-family: inherit; }
     100% { transform: translate(var(--dx), var(--dy)) scale(1.3) rotate(180deg); opacity: 0; }
 }
 
-/* CRT scanline overlay, same trick the reference game uses -- a repeating
-   dark stripe gradient over everything, for a retro arcade-screen feel. */
-#scanlines {
-    position: absolute;
-    inset: 0;
-    z-index: 30;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,0,0,0.07) 2px,
-        rgba(0,0,0,0.07) 4px
-    );
-}
-
 #btn-mute {
     position: absolute;
     top: max(10px, env(safe-area-inset-top));
     right: 12px;
-    z-index: 31;
-    width: 34px; height: 34px;
-    font-size: 1rem;
+    z-index: 6;
+    width: 36px; height: 36px;
+    font-size: 1.05rem;
     line-height: 1;
     background: rgba(43, 16, 85, 0.55);
     border: 2px solid var(--gold);
-    border-radius: 8px;
+    border-radius: 50%;
     color: var(--white);
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 8px var(--shadow);
+    transition: transform 0.12s ease;
 }
-#btn-mute:active { transform: translateY(1px); }
+#btn-mute:hover { transform: scale(1.06); }
+#btn-mute:active { transform: scale(0.96); }
 
 /* ---------- Top bar ---------- */
 #topbar {
@@ -143,7 +124,8 @@ button { font-family: inherit; }
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: max(12px, env(safe-area-inset-top)) 18px 10px;
+    /* extra right padding clears the always-on-top mute button */
+    padding: max(12px, env(safe-area-inset-top)) 58px 10px 18px;
 }
 #topbar.hidden { display: none; }
 
@@ -169,10 +151,11 @@ button { font-family: inherit; }
     background: rgba(43, 16, 85, 0.55);
     border: 2px solid var(--gold);
     color: var(--white);
-    font-family: 'Press Start 2P', cursive;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 0.7rem;
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.95rem;
     white-space: nowrap;
 }
 
@@ -265,9 +248,9 @@ button { font-family: inherit; }
 #title-logo { display: flex; flex-direction: column; align-items: center; }
 .title-logo-img { display: none; max-width: 92%; max-height: 190px; }
 .title-logo-fallback {
-    font-family: 'Press Start 2P', cursive;
-    font-size: clamp(1.15rem, 4.4vw, 2.1rem);
-    line-height: 1.6;
+    font-family: 'Baloo 2', cursive;
+    font-weight: 800;
+    font-size: clamp(1.8rem, 6vw, 3rem);
     color: var(--white);
     text-shadow: 0 3px 0 var(--pink-hot), 0 6px 18px var(--shadow);
     letter-spacing: 0.5px;
@@ -277,20 +260,20 @@ button { font-family: inherit; }
 
 .tagline {
     color: var(--white);
-    font-weight: 700;
     font-size: clamp(0.95rem, 2.4vw, 1.15rem);
     max-width: 480px;
     text-shadow: 0 2px 6px var(--shadow);
 }
 
 .btn-primary {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.85rem;
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 1.15rem;
     color: #3a1e5c;
     background: linear-gradient(180deg, var(--gold-bright), var(--gold));
     border: 3px solid #fff;
-    padding: 16px 30px;
-    border-radius: 10px;
+    padding: 14px 38px;
+    border-radius: 999px;
     cursor: pointer;
     box-shadow: 0 6px 0 #c98f1f, 0 10px 20px var(--shadow);
     transition: transform 0.12s ease, box-shadow 0.12s ease;
@@ -303,38 +286,39 @@ button { font-family: inherit; }
 
 /* ---------- Question screen ---------- */
 .category-chip {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.7rem;
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 0.85rem;
     color: #3a1e5c;
     background: var(--gold-bright);
-    padding: 6px 14px;
-    border-radius: 6px;
-    border: 2px solid #fff;
-    box-shadow: 0 3px 0 var(--shadow);
+    padding: 5px 16px;
+    border-radius: 999px;
+    box-shadow: 0 3px 8px var(--shadow);
 }
 
 .question-card {
     width: 100%;
     background: var(--card-bg);
-    border-radius: 10px;
+    border-radius: 24px;
     padding: 22px 22px 26px;
-    box-shadow: 0 8px 0 var(--shadow), inset 0 2px 0 rgba(255,255,255,0.7), inset 0 -3px 0 rgba(0,0,0,0.12);
+    box-shadow: 0 14px 30px var(--shadow);
     border: 3px solid var(--gold);
 }
 
 #question-counter {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.7rem;
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 0.85rem;
     color: var(--purple-mid);
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     letter-spacing: 0.5px;
 }
 
 #question-text {
-    font-family: 'Silkscreen', monospace;
+    font-family: 'Baloo 2', cursive;
     font-weight: 700;
-    font-size: clamp(1.15rem, 3.6vw, 1.55rem);
-    line-height: 1.5;
+    font-size: clamp(1.1rem, 3.4vw, 1.5rem);
+    line-height: 1.35;
     margin-bottom: 18px;
     color: var(--text-dark);
 }
@@ -349,12 +333,12 @@ button { font-family: inherit; }
 }
 
 .answer-btn {
-    font-family: 'Silkscreen', monospace;
-    font-weight: 700;
-    font-size: 1.05rem;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
     text-align: left;
     padding: 14px 16px;
-    border-radius: 10px;
+    border-radius: 14px;
     border: 2.5px solid #d9c8f0;
     background: #ffffff;
     color: var(--text-dark);
@@ -367,11 +351,12 @@ button { font-family: inherit; }
 .answer-btn .opt-letter {
     flex: none;
     width: 26px; height: 26px;
-    border-radius: 6px;
+    border-radius: 50%;
     background: var(--purple-mid);
     color: #fff;
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.7rem;
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 0.85rem;
     display: flex; align-items: center; justify-content: center;
 }
 .answer-btn:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--pink-hot); }
@@ -411,25 +396,23 @@ button { font-family: inherit; }
 
 /* ---------- Results screen ---------- */
 #results-heading {
-    font-family: 'Press Start 2P', cursive;
-    font-size: clamp(1.1rem, 4vw, 1.8rem);
-    line-height: 1.6;
+    font-family: 'Baloo 2', cursive;
+    font-weight: 800;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
     color: var(--white);
     text-shadow: 0 3px 0 var(--pink-hot), 0 6px 18px var(--shadow);
 }
 #results-score {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.85rem;
-    line-height: 1.8;
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 1.2rem;
     color: var(--gold-bright);
     text-shadow: 0 2px 6px var(--shadow);
 }
 #results-message {
     color: var(--white);
-    font-weight: 700;
     max-width: 480px;
     font-size: 1.05rem;
-    line-height: 1.5;
     text-shadow: 0 2px 6px var(--shadow);
 }
 

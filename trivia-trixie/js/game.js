@@ -103,7 +103,7 @@ TT.UI = {
         var ids = [
             "scene-bg", "sparkle-field", "topbar", "progress-track", "score-num",
             "content", "screen-title", "screen-question", "screen-results",
-            "title-logo", "btn-start",
+            "title-logo", "btn-start", "btn-mute",
             "category-label", "trixie-question", "question-counter", "question-text",
             "answers-grid", "feedback-caption",
             "trixie-results", "results-heading", "results-score", "results-message", "btn-again"
