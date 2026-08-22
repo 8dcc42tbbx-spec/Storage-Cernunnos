@@ -387,11 +387,47 @@ button { font-family: inherit; }
     75% { transform: translateX(6px); }
 }
 
-#feedback-caption {
-    margin-top: 14px;
+/* ---------- Trixie's speech bubble (title / question / results screens) --
+   A simple white/cream bubble with a small triangular tail pointing up at
+   her, used everywhere she "talks." Text is filled in and revealed by
+   TT.UI.say() (a typewriter effect synced to a talk-blip sound); the bubble
+   stays hidden until she actually has something to say. */
+.speech-bubble {
+    position: relative;
+    display: none;
+    background: var(--card-bg);
+    color: var(--text-dark);
+    border: 2.5px solid var(--purple-mid);
+    border-radius: 16px;
+    padding: 10px 16px;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    max-width: 420px;
     min-height: 1.4em;
-    font-weight: 700;
-    color: var(--purple-mid);
+    box-shadow: 0 6px 14px var(--shadow);
+}
+.speech-bubble:not(:empty) { display: block; }
+.speech-bubble::before {
+    content: "";
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 11px 13px 11px;
+    border-style: solid;
+    border-color: transparent transparent var(--purple-mid) transparent;
+}
+.speech-bubble::after {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 8px 10px 8px;
+    border-style: solid;
+    border-color: transparent transparent var(--card-bg) transparent;
 }
 
 /* ---------- Results screen ---------- */
@@ -407,12 +443,6 @@ button { font-family: inherit; }
     font-weight: 700;
     font-size: 1.2rem;
     color: var(--gold-bright);
-    text-shadow: 0 2px 6px var(--shadow);
-}
-#results-message {
-    color: var(--white);
-    max-width: 480px;
-    font-size: 1.05rem;
     text-shadow: 0 2px 6px var(--shadow);
 }
 

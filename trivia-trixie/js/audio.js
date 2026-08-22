@@ -379,6 +379,15 @@ TT.Audio = (function () {
             playNote('chime', 'D6', t + 0.03, 0.1, 0.2, sfxGain);
         },
 
+        // A quick, quiet, randomly-pitched blip used to sync with Trixie's
+        // dialogue as it types out -- the classic Animal Crossing-style
+        // "chattering" voice, without any actual recorded/synthesized speech.
+        talkBlip: function () {
+            var t = now(0.001); if (!t) return;
+            var freqHz = 640 + Math.random() * 260;
+            playNote('pluck', freqHz, t, 0.045, 0.13, sfxGain);
+        },
+
         // A bright bell+chime "ding-ding-ding" landing on a major triad, then
         // a quick upward sparkle flourish -- much more of a "magic happened"
         // moment than a plain three-note bell run.

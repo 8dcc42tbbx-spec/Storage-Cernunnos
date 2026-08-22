@@ -103,9 +103,9 @@ TT.UI = {
         var ids = [
             "scene-bg", "sparkle-field", "topbar", "progress-track", "score-num",
             "content", "screen-title", "screen-question", "screen-results",
-            "title-logo", "btn-start", "btn-mute",
+            "title-logo", "btn-start", "btn-mute", "trixie-title-bubble",
             "category-label", "trixie-question", "question-counter", "question-text",
-            "answers-grid", "feedback-caption",
+            "answers-grid", "trixie-question-bubble",
             "trixie-results", "results-heading", "results-score", "results-message", "btn-again"
         ];
         var self = this;
@@ -197,7 +197,28 @@ TT.UI = {
         }
     },
 
-    letters: ["A", "B", "C", "D"]
+    letters: ["A", "B", "C", "D"],
+
+    // Reveals `text` into a .speech-bubble element one character at a time,
+    // playing a soft talk-blip every couple of characters -- Trixie's stand-in
+    // for a real voice. Cancels any typewriter already running on that
+    // element first, so re-triggering it (new question, new answer) never
+    // leaves two reveals racing each other. Passing an empty string clears
+    // and hides the bubble (its CSS shows it only while non-empty).
+    say: function (el, text) {
+        if (!el) return;
+        if (el._ttTimer) { clearInterval(el._ttTimer); el._ttTimer = null; }
+        el.textContent = "";
+        if (!text) return;
+        var i = 0;
+        el._ttTimer = setInterval(function () {
+            i++;
+            el.textContent = text.slice(0, i);
+            var ch = text.charAt(i - 1);
+            if (/\S/.test(ch) && i % 2 === 0) TT.Audio.talkBlip();
+            if (i >= text.length) { clearInterval(el._ttTimer); el._ttTimer = null; }
+        }, 26);
+    }
 };
 
 // ---------------------------------------------------------------
@@ -208,6 +229,7 @@ TT.Game = {
     index: 0,
     results: [],       // booleans, correct/wrong per answered question
     answered: false,
+    streak: 0,         // current run of consecutive correct answers
 
     init: function () {
         TT.UI.init();
@@ -215,6 +237,7 @@ TT.Game = {
         TT.Assets.applyLogo(TT.UI.el.titleLogo);
         TT.UI.setScene(TT.Assets.backdropUrl(), "linear-gradient(160deg, #3a1465, #1c0a38)");
         TT.UI.showScreen("title");
+        TT.UI.say(TT.UI.el.trixieTitleBubble, TT.pickLine(TT.DIALOGUE.titleGreetings, "title"));
 
         var self = this;
         TT.UI.el.btnStart.addEventListener("click", function () { self.startGame(); });
@@ -254,6 +277,7 @@ TT.Game = {
         this.index = 0;
         this.results = [];
         this.answered = false;
+        this.streak = 0;
 
         TT.UI.showScreen("question");
         this._loadQuestion();
@@ -267,7 +291,9 @@ TT.Game = {
         TT.UI.el.questionCounter.textContent =
             "Question " + (this.index + 1) + " of " + TT.CONST.QUESTIONS_PER_GAME;
         TT.UI.el.questionText.textContent = item.q;
-        TT.UI.el.feedbackCaption.textContent = "";
+
+        var banterLines = TT.DIALOGUE.categoryBanter[item.c] || TT.DIALOGUE.categoryBanterFallback;
+        TT.UI.say(TT.UI.el.trixieQuestionBubble, TT.pickLine(banterLines, "banter-" + item.c));
 
         TT.Assets.applyTrixie(TT.UI.el.trixieQuestion, "idle");
         TT.UI.setScene(TT.Assets.sceneUrl(item.c), TT.UI.categoryGradient[item.c]);
@@ -313,19 +339,30 @@ TT.Game = {
         TT.UI.renderProgress(this.results, this.index, TT.CONST.QUESTIONS_PER_GAME);
         TT.UI.el.scoreNum.textContent = this.results.filter(Boolean).length;
 
+        var line;
         if (correct) {
+            this.streak++;
             TT.Audio.correct();
             TT.Assets.applyTrixie(TT.UI.el.trixieQuestion, Math.random() < 0.5 ? "happy" : "laugh");
-            TT.UI.el.feedbackCaption.textContent = "Correct! ✨";
+            var streakLines = TT.DIALOGUE.correctStreak[this.streak];
+            line = streakLines
+                ? TT.pickLine(streakLines, "streak-" + this.streak)
+                : TT.pickLine(TT.DIALOGUE.correctGeneral, "correct");
             TT.UI.burstSparkles(btnEl, 12);
         } else {
+            this.streak = 0;
             TT.Audio.wrong();
             TT.Assets.applyTrixie(TT.UI.el.trixieQuestion, "sad");
-            TT.UI.el.feedbackCaption.textContent = "Not quite! The answer was “" + item.choices[item.answerIndex] + "”";
+            line = TT.pickLine(TT.DIALOGUE.wrongGeneral, "wrong") +
+                " The answer was “" + item.choices[item.answerIndex] + "”.";
         }
+        TT.UI.say(TT.UI.el.trixieQuestionBubble, line);
 
+        // Give longer lines (mainly the wrong-answer ones, which include the
+        // correct answer) enough time to actually be read before advancing.
+        var readMs = Math.min(5200, Math.max(TT.CONST.FEEDBACK_DELAY_MS, 700 + line.length * 45));
         var self = this;
-        this._advanceTimer = setTimeout(function () { self._nextQuestion(); }, TT.CONST.FEEDBACK_DELAY_MS);
+        this._advanceTimer = setTimeout(function () { self._nextQuestion(); }, readMs);
     },
 
     _nextQuestion: function () {
@@ -362,7 +399,7 @@ TT.Game = {
         }
 
         TT.UI.el.resultsHeading.textContent = heading;
-        TT.UI.el.resultsMessage.textContent = message;
+        TT.UI.say(TT.UI.el.resultsMessage, message);
         TT.UI.setScene(TT.Assets.endingUrl(tier), tier === "lose"
             ? "linear-gradient(160deg, #4a3a6a, #241338)"
             : "linear-gradient(160deg, #ff5da2, #5b2a86)");
