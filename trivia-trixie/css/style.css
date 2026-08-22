@@ -50,6 +50,21 @@ button { font-family: inherit; }
     z-index: 0;
 }
 #scene-bg.fading { opacity: 0.25; }
+
+/* Optional ending video (win/lose/perfect). Sits behind #scene-bg's own
+   ::after scrim (below, in source order) so the same text-readability
+   darkening still applies on top of it. Hidden until JS gives it a src
+   and adds .active -- falls back to the static image/gradient otherwise. */
+#ending-video {
+    display: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+#ending-video.active { display: block; }
+
 #scene-bg::after {
     content: "";
     position: absolute;

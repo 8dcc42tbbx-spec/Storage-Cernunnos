@@ -39,6 +39,7 @@ TT.Assets = {
     logoUrl: function () { return this.basePath + "title_logo.png"; },
     backdropUrl: function () { return this.basePath + "stage_backdrop.png"; },
     endingUrl: function (tier) { return this.basePath + "ending_" + tier + ".png"; },
+    endingVideoUrl: function (tier) { return this.basePath + "ending_" + tier + ".mp4"; },
     sceneUrl: function (category) {
         var key = TT.CATEGORY_SCENES[category] || "popculture";
         return this.basePath + "scene_" + key + ".png";
@@ -85,6 +86,27 @@ TT.Assets = {
     // so a missing PNG simply reveals the gradient underneath (no broken icon).
     sceneCss: function (imgUrl, gradientCss) {
         return "url('" + imgUrl + "'), " + gradientCss;
+    },
+
+    // Tests whether a <video> URL actually has playable data; calls back
+    // with (ok:boolean). Same "quietly fall back if it's not there yet"
+    // pattern as probe() for images.
+    probeVideo: function (url, cb) {
+        if (this.available.hasOwnProperty(url)) { cb(this.available[url]); return; }
+        var v = document.createElement("video");
+        var self = this;
+        var done = false;
+        function finish(ok) {
+            if (done) return;
+            done = true;
+            self.available[url] = ok;
+            cb(ok);
+        }
+        v.addEventListener("loadeddata", function () { finish(true); }, { once: true });
+        v.addEventListener("error", function () { finish(false); }, { once: true });
+        v.preload = "auto";
+        v.src = url;
+        v.load();
     }
 };
 
@@ -101,7 +123,7 @@ TT.UI = {
 
     init: function () {
         var ids = [
-            "scene-bg", "sparkle-field", "topbar", "progress-track", "score-num",
+            "scene-bg", "ending-video", "sparkle-field", "topbar", "progress-track", "score-num",
             "content", "screen-title", "screen-question", "screen-results",
             "title-logo", "btn-start", "btn-mute", "btn-fullscreen", "trixie-title-bubble",
             "category-label", "trixie-question", "question-counter", "question-text",
@@ -294,6 +316,13 @@ TT.Game = {
         TT.Audio.unlock();
         TT.Audio.click();
 
+        // Stop any ending video left playing from a previous round -- it's
+        // otherwise still decoding/looping off-screen once we leave results.
+        if (TT.UI.el.endingVideo && TT.UI.el.endingVideo.classList.contains("active")) {
+            TT.UI.el.endingVideo.pause();
+            TT.UI.el.endingVideo.classList.remove("active");
+        }
+
         var chosen = TT.Utils.pickN(TT.QUESTIONS, TT.CONST.QUESTIONS_PER_GAME);
         this.set = chosen.map(function (q) {
             var order = TT.Utils.shuffle([0, 1, 2, 3]);
@@ -433,23 +462,47 @@ TT.Game = {
 
         if (!win) TT.Audio.tryAgain();
 
-        // The painted ending scenes already depict Trixie full-size and
-        // centered, so the small foreground mood portrait would float
+        // The painted/filmed ending scenes already depict Trixie full-size
+        // and centered, so the small foreground mood portrait would float
         // awkwardly on top of her face -- only show it (and burst sparkles
-        // from it) when there's no ending art and we're relying on the
-        // plain emoji fallback instead.
+        // from it) when neither is available and we're relying on the
+        // plain emoji fallback instead. A video, if present, wins over the
+        // static PNG for that tier.
         var trixieEl = TT.UI.el.trixieResults;
-        TT.Assets.probe(TT.Assets.endingUrl(tier), function (hasEndingArt) {
-            if (hasEndingArt) {
+        var videoEl = TT.UI.el.endingVideo;
+        TT.Assets.probeVideo(TT.Assets.endingVideoUrl(tier), function (hasVideo) {
+            if (hasVideo) {
+                videoEl.src = TT.Assets.endingVideoUrl(tier);
+                videoEl.currentTime = 0;
+                videoEl.classList.add("active");
+                videoEl.play().catch(function () {});
                 trixieEl.style.display = "none";
-            } else {
-                trixieEl.style.display = "";
-                TT.Assets.applyTrixie(trixieEl, mood);
+                if (win) {
+                    TT.Audio.win();
+                    TT.UI.burstSparkles(TT.UI.el.resultsHeading, 22);
+                }
+                return;
             }
-            if (win) {
-                TT.Audio.win();
-                TT.UI.burstSparkles(hasEndingArt ? TT.UI.el.resultsHeading : trixieEl, 22);
+
+            if (videoEl.hasAttribute("src")) {
+                videoEl.pause();
+                videoEl.classList.remove("active");
+                videoEl.removeAttribute("src");
+                videoEl.load();
             }
+
+            TT.Assets.probe(TT.Assets.endingUrl(tier), function (hasEndingArt) {
+                if (hasEndingArt) {
+                    trixieEl.style.display = "none";
+                } else {
+                    trixieEl.style.display = "";
+                    TT.Assets.applyTrixie(trixieEl, mood);
+                }
+                if (win) {
+                    TT.Audio.win();
+                    TT.UI.burstSparkles(hasEndingArt ? TT.UI.el.resultsHeading : trixieEl, 22);
+                }
+            });
         });
     },
 
