@@ -284,6 +284,21 @@ button { font-family: inherit; }
     box-shadow: 0 3px 0 #c98f1f, 0 6px 14px var(--shadow);
 }
 
+.btn-secondary {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    padding: 9px 22px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.12s ease;
+}
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.22); transform: translateY(-1px); }
+.btn-secondary:active { transform: translateY(1px); }
+
 /* ---------- Question screen ---------- */
 .category-chip {
     font-family: 'Baloo 2', cursive;

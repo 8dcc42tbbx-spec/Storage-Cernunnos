@@ -103,7 +103,7 @@ TT.UI = {
         var ids = [
             "scene-bg", "sparkle-field", "topbar", "progress-track", "score-num",
             "content", "screen-title", "screen-question", "screen-results",
-            "title-logo", "btn-start", "btn-mute", "trixie-title-bubble",
+            "title-logo", "btn-start", "btn-mute", "btn-fullscreen", "trixie-title-bubble",
             "category-label", "trixie-question", "question-counter", "question-text",
             "answers-grid", "trixie-question-bubble",
             "trixie-results", "results-heading", "results-score", "results-message", "btn-again"
@@ -245,6 +245,10 @@ TT.Game = {
         if (TT.UI.el.btnMute) {
             TT.UI.el.btnMute.addEventListener("click", function () { self._toggleMute(); });
         }
+        if (TT.UI.el.btnFullscreen) {
+            TT.UI.el.btnFullscreen.addEventListener("click", function () { self._toggleFullscreen(); });
+        }
+        document.addEventListener("fullscreenchange", function () { self._syncFullscreenLabel(); });
 
         document.addEventListener("keydown", function (e) { self._onKey(e); });
 
@@ -261,6 +265,29 @@ TT.Game = {
     _toggleMute: function () {
         var muted = TT.Audio.toggleMute();
         if (TT.UI.el.btnMute) TT.UI.el.btnMute.textContent = muted ? "🔇" : "🔊";
+    },
+
+    // Wrapped in try/catch since the Fullscreen API is missing or
+    // restricted on some browsers (notably iOS Safari for non-video
+    // elements) -- when unsupported this just quietly does nothing rather
+    // than throwing.
+    _toggleFullscreen: function () {
+        try {
+            if (!document.fullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(function () {});
+                }
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen().catch(function () {});
+            }
+        } catch (e) { /* fullscreen unavailable; ignore */ }
+    },
+
+    _syncFullscreenLabel: function () {
+        if (!TT.UI.el.btnFullscreen) return;
+        TT.UI.el.btnFullscreen.textContent = document.fullscreenElement
+            ? "⛶ Exit Fullscreen"
+            : "⛶ Fullscreen";
     },
 
     startGame: function () {
@@ -427,6 +454,12 @@ TT.Game = {
     },
 
     _onKey: function (e) {
+        if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            this._toggleFullscreen();
+            return;
+        }
+
         var screenQuestionVisible = !TT.UI.el.screenQuestion.classList.contains("hidden");
         var screenTitleVisible = !TT.UI.el.screenTitle.classList.contains("hidden");
         var screenResultsVisible = !TT.UI.el.screenResults.classList.contains("hidden");

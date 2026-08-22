@@ -12,7 +12,9 @@ TT.DIALOGUE = {
         "Dust off your brain, darling -- the magic's about to start!",
         "Ten questions stand between you and a wish. Think you've got it?",
         "Wands up! Let's see what kind of trivia champion you are!",
-        "I've been waiting all day for someone fabulous like you!"
+        "I've been waiting all day for someone fabulous like you!",
+        "Answer seven of my ten questions right, and I'll grant you any wish you like!",
+        "Get seven correct, and poof -- your wish is mine to grant!"
     ],
 
     // A little banter when a question from this category comes up.
