@@ -37,6 +37,13 @@ jobs:
           cp -r trivia-trixie/assets site/
           touch site/.nojekyll
 
+          # Cache-bust every local <script src> / <link href> with this
+          # commit's short SHA, so a browser (or GitHub's edge cache) that
+          # already has an old js/css file cached is forced to fetch the new
+          # one instead of silently reusing stale audio/game logic.
+          SHORT_SHA="${GITHUB_SHA::8}"
+          sed -i -E "s#(src|href)=\"(css|js)/([^\"]+)\"#\1=\"\2/\3?v=${SHORT_SHA}\"#g" site/index.html
+
       - name: Push to gh-pages
         run: |
           cd site
