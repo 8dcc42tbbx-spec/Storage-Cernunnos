@@ -363,17 +363,30 @@ TT.Game = {
 
         TT.UI.el.resultsHeading.textContent = heading;
         TT.UI.el.resultsMessage.textContent = message;
-        TT.Assets.applyTrixie(TT.UI.el.trixieResults, mood);
         TT.UI.setScene(TT.Assets.endingUrl(tier), tier === "lose"
             ? "linear-gradient(160deg, #4a3a6a, #241338)"
             : "linear-gradient(160deg, #ff5da2, #5b2a86)");
 
-        if (win) {
-            TT.Audio.win();
-            TT.UI.burstSparkles(TT.UI.el.trixieResults, 22);
-        } else {
-            TT.Audio.tryAgain();
-        }
+        if (!win) TT.Audio.tryAgain();
+
+        // The painted ending scenes already depict Trixie full-size and
+        // centered, so the small foreground mood portrait would float
+        // awkwardly on top of her face -- only show it (and burst sparkles
+        // from it) when there's no ending art and we're relying on the
+        // plain emoji fallback instead.
+        var trixieEl = TT.UI.el.trixieResults;
+        TT.Assets.probe(TT.Assets.endingUrl(tier), function (hasEndingArt) {
+            if (hasEndingArt) {
+                trixieEl.style.display = "none";
+            } else {
+                trixieEl.style.display = "";
+                TT.Assets.applyTrixie(trixieEl, mood);
+            }
+            if (win) {
+                TT.Audio.win();
+                TT.UI.burstSparkles(hasEndingArt ? TT.UI.el.resultsHeading : trixieEl, 22);
+            }
+        });
     },
 
     _onKey: function (e) {
