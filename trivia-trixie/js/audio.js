@@ -63,6 +63,13 @@ TT.Audio = (function () {
     // of a plain detuned sine.
     var INST = {
         bell:  { ratio: 3.5,  index: 2.4, indexDecay: 0.04, iDec: 0.4,  atk: 0.002, dec: 0.45, sus: 0.10, rel: 0.55, gain: 0.30 },
+        // Bright, long-ringing, high harmonic ratio -- a music-box / celesta
+        // voice. This is the game's core "magic" timbre: melodies, twinkles,
+        // and sparkle cascades all lean on it.
+        chime: { ratio: 4.2,  index: 3.0, indexDecay: 0.03, iDec: 0.5,  atk: 0.001, dec: 0.6,  sus: 0.06, rel: 0.9,  gain: 0.24 },
+        // Plucked, warm, quicker decay than chime -- the waltz's "oom-pah"
+        // harmony and quick magical flourishes.
+        harp:  { ratio: 2.0,  index: 1.8, indexDecay: 0.08, iDec: 0.25, atk: 0.002, dec: 0.35, sus: 0.08, rel: 0.5,  gain: 0.30 },
         pluck: { ratio: 2.0,  index: 2.0, indexDecay: 0.05, iDec: 0.16, atk: 0.002, dec: 0.20, sus: 0.05, rel: 0.20, gain: 0.32 },
         brass: { ratio: 1.0,  index: 1.6, indexDecay: 0.35, iDec: 0.20, atk: 0.02,  dec: 0.12, sus: 0.72, rel: 0.14, gain: 0.32, spread: 6 },
         bass:  { ratio: 1.0,  index: 1.2, indexDecay: 0.12, iDec: 0.14, atk: 0.004, dec: 0.10, sus: 0.55, rel: 0.10, gain: 0.46 },
@@ -130,6 +137,8 @@ TT.Audio = (function () {
         o.start(t); o.stop(t + 0.28);
     }
 
+    // A quick burst of high-passed noise -- fairy-dust "sparkle" texture
+    // layered under bells/chimes on delightful moments.
     function shimmer(t, vel, bus) {
         var a = ctx();
         var s = a.createBufferSource(); s.buffer = noise();
@@ -139,6 +148,31 @@ TT.Audio = (function () {
         g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
         s.connect(hp); hp.connect(g); g.connect(bus || sfxGain);
         s.start(t); s.stop(t + 0.2);
+    }
+
+    // A soft, quickly-muffled noise puff -- a gentle "poof" of fizzled fairy
+    // dust for a wrong answer, instead of a harsh buzzer. Kid-friendly: reads
+    // clearly as "not quite" without ever sounding like a punishment.
+    function poof(t, vel, bus) {
+        var a = ctx();
+        var s = a.createBufferSource(); s.buffer = noise();
+        var lp = a.createBiquadFilter(); lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(2000, t);
+        lp.frequency.exponentialRampToValueAtTime(280, t + 0.22);
+        var g = a.createGain();
+        g.gain.setValueAtTime(Math.max((vel || 0.3) * 0.4, 0.0001), t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+        s.connect(lp); lp.connect(g); g.connect(bus || sfxGain);
+        s.start(t); s.stop(t + 0.26);
+    }
+
+    // A quick ascending or descending run of tiny chime grace-notes -- the
+    // "twinkle" flourish used throughout (title sparkles, correct-answer
+    // dings, win cascades). dir: 1 = ascending, -1 = descending.
+    function sparkleRun(t, notes, step, vel, bus) {
+        for (var i = 0; i < notes.length; i++) {
+            playNote('chime', notes[i], t + i * step, step * 3, vel, bus);
+        }
     }
 
     // ---- track building helpers -----------------------------------------
@@ -158,24 +192,93 @@ TT.Audio = (function () {
     // ---- TRACKS -----------------------------------------------------------
     var MUSIC = {};
 
-    // TITLE -- a short, dreamy, sparkly loop. F major pentatonic-ish: bright
-    // and simple, never tense, sets the "friendly game show" tone.
+    // TITLE -- "Trixie's Waltz": a full 24-bar fairy-tale waltz in D major,
+    // written in 3-beat bars (oom-pah-pah: bass on beat 1, harp chord-plucks
+    // on beats 2 and 3). Form is AABA: two identical 8-bar verses (the second
+    // gains a soft pad underneath for lift), then an 8-bar bridge that swells
+    // with a fuller pad and a higher melodic peak before resolving back to
+    // the top of the loop.
     (function () {
         var n = [];
-        seq(n, 0, 7.6, 'pad', ['F3', 'C4'], 0.28);
-        seq(n, 8, 7.6, 'pad', ['G3', 'D4'], 0.26);
-        run(n, 0, 2, 'bell', ['F5', 'A5', 'C6', 'A5'], 0.30);
-        run(n, 8, 2, 'bell', ['G5', 'Bb5', 'D6', 'Bb5'], 0.28);
-        run(n, 0, 4, 'bass', ['F2', 'C3', 'G2', 'D3'], 0.4, 3.6);
-        MUSIC.title = { bpm: 96, len: 16, loop: true, notes: n };
+        var BAR = 3; // beats per bar
+
+        // chord per bar: [bass note, harp note 1, harp note 2]
+        var CHORDS = [
+            // verse A1 (bars 0-7): I - V - vi - IV - I - V - IV - I
+            ['D2', 'F#4', 'A4'], ['A1', 'C#4', 'E4'], ['B1', 'D4', 'F#4'], ['G1', 'B3', 'D4'],
+            ['D2', 'F#4', 'A4'], ['A1', 'C#4', 'E4'], ['G1', 'B3', 'D4'], ['D2', 'F#4', 'A4'],
+            // verse A2 (bars 8-15): repeat, pad enters underneath
+            ['D2', 'F#4', 'A4'], ['A1', 'C#4', 'E4'], ['B1', 'D4', 'F#4'], ['G1', 'B3', 'D4'],
+            ['D2', 'F#4', 'A4'], ['A1', 'C#4', 'E4'], ['G1', 'B3', 'D4'], ['D2', 'F#4', 'A4'],
+            // bridge (bars 16-23): vi - IV - I - V - vi - IV - V - I
+            ['B1', 'D4', 'F#4'], ['G1', 'B3', 'D4'], ['D2', 'F#4', 'A4'], ['A1', 'C#4', 'E4'],
+            ['B1', 'D4', 'F#4'], ['G1', 'B3', 'D4'], ['A1', 'C#4', 'E4'], ['D2', 'F#4', 'A4']
+        ];
+        for (var bar = 0; bar < CHORDS.length; bar++) {
+            var beat = bar * BAR, ch = CHORDS[bar];
+            seq(n, beat, 1.5, 'bass', ch[0], 0.42);
+            seq(n, beat + 1, 0.9, 'harp', [ch[1], ch[2]], 0.26);
+            seq(n, beat + 2, 0.9, 'harp', [ch[1], ch[2]], 0.24);
+        }
+
+        // melody (music-box "chime" voice) -- one flowing phrase across all
+        // three sections, echoed verbatim in A2, then lifted higher in the
+        // bridge before settling back down to loop cleanly.
+        var MEL = [
+            // [bar, beatOffsetInBar, durationBeats, note]
+            [0, 0, 3, 'A4'],
+            [1, 0, 1.5, 'G4'], [1, 1.5, 1.5, 'F#4'],
+            [2, 0, 3, 'F#4'],
+            [3, 0, 1.5, 'G4'], [3, 1.5, 1.5, 'A4'],
+            [4, 0, 3, 'D5'],
+            [5, 0, 1.5, 'C#5'], [5, 1.5, 1.5, 'B4'],
+            [6, 0, 3, 'A4'],
+            [7, 0, 3, 'D5'],
+
+            [8, 0, 3, 'A4'],
+            [9, 0, 1.5, 'G4'], [9, 1.5, 1.5, 'F#4'],
+            [10, 0, 3, 'F#4'],
+            [11, 0, 1.5, 'G4'], [11, 1.5, 1.5, 'A4'],
+            [12, 0, 3, 'D5'],
+            [13, 0, 1.5, 'C#5'], [13, 1.5, 1.5, 'B4'],
+            [14, 0, 3, 'A4'],
+            [15, 0, 3, 'D5'],
+
+            [16, 0, 3, 'D5'],
+            [17, 0, 1.5, 'B4'], [17, 1.5, 1.5, 'D5'],
+            [18, 0, 3, 'F#5'],
+            [19, 0, 1.5, 'E5'], [19, 1.5, 1.5, 'C#5'],
+            [20, 0, 3, 'D5'],
+            [21, 0, 3, 'B4'],
+            [22, 0, 1.5, 'C#5'], [22, 1.5, 1.5, 'B4'],
+            [23, 0, 3, 'A4']
+        ];
+        MEL.forEach(function (m) {
+            seq(n, m[0] * BAR + m[1], m[2] * 0.92, 'chime', m[3], 0.34);
+        });
+
+        // pad swell: absent in A1 (keeps the opening light, like a music box),
+        // enters under A2, fuller still under the bridge.
+        seq(n, 24, 23.5, 'pad', ['D3', 'A3'], 0.15);
+        seq(n, 48, 23.5, 'pad', ['D3', 'F#3', 'A3'], 0.19);
+
+        // tiny ascending twinkle flourish at the start of each 8-bar phrase,
+        // layered on top of that bar's downbeat as a decorative grace-note run
+        [0, 24, 48].forEach(function (beat) {
+            run(n, beat, 0.06, 'chime', ['D6', 'F#6', 'A6', 'D7'], 0.16, 0.18);
+        });
+
+        MUSIC.title = { bpm: 138, len: 72, loop: true, notes: n };
     })();
 
     // QUESTION -- soft, friendly anticipation bed. Deliberately quiet and
-    // uneventful so it never feels like a countdown-to-doom for a kid.
+    // uneventful so it never feels like a countdown-to-doom for a kid, with
+    // one small twinkle per loop to keep a touch of magic in the air.
     (function () {
         var n = [];
-        seq(n, 0, 7.6, 'pad', ['C3', 'G3'], 0.14);
-        run(n, 0, 2, 'pluck', ['C5', 'C5', 'C5', 'C5'], 0.12, 0.3);
+        seq(n, 0, 7.6, 'pad', ['D3', 'A3'], 0.12);
+        run(n, 0, 2, 'pluck', ['D4', 'F#4', 'A4', 'F#4'], 0.14, 0.4);
+        seq(n, 6, 0.6, 'chime', 'A5', 0.10);
         MUSIC.question = { bpm: 100, len: 8, loop: true, notes: n };
     })();
 
@@ -269,41 +372,67 @@ TT.Audio = (function () {
         playMusic: playMusic,
         stopMusic: stopMusic,
 
-        click: function () { if (!now()) return; playNote('pluck', 'A4', now(0.005), 0.08, 0.5, sfxGain); },
+        // A tiny two-note twinkle for button taps.
+        click: function () {
+            var t = now(0.003); if (!t) return;
+            playNote('chime', 'A5', t, 0.08, 0.26, sfxGain);
+            playNote('chime', 'D6', t + 0.03, 0.1, 0.2, sfxGain);
+        },
 
+        // A bright bell+chime "ding-ding-ding" landing on a major triad, then
+        // a quick upward sparkle flourish -- much more of a "magic happened"
+        // moment than a plain three-note bell run.
         correct: function () {
             var t = now(0.005); if (!t) return;
-            playNote('bell', 'C5', t, 0.16, 0.75, sfxGain);
-            playNote('bell', 'E5', t + 0.09, 0.16, 0.75, sfxGain);
-            playNote('bell', 'G5', t + 0.18, 0.42, 0.8, sfxGain);
+            playNote('bell', 'C5', t, 0.14, 0.7, sfxGain);
+            playNote('chime', 'C5', t, 0.3, 0.4, sfxGain);
+            playNote('bell', 'E5', t + 0.08, 0.14, 0.72, sfxGain);
+            playNote('chime', 'E5', t + 0.08, 0.3, 0.4, sfxGain);
+            playNote('bell', 'G5', t + 0.16, 0.35, 0.78, sfxGain);
+            playNote('chime', 'G5', t + 0.16, 0.5, 0.45, sfxGain);
+            sparkleRun(t + 0.24, ['A5', 'B5', 'C#6'], 0.05, 0.28, sfxGain);
             shimmer(t + 0.05, 0.5, sfxGain);
         },
 
+        // A gentle "poof" of fizzled fairy dust plus a soft descending pluck
+        // -- clearly reads as "not quite," but never harsh or punishing.
         wrong: function () {
             var t = now(0.005); if (!t) return;
-            playNote('brass', 'Eb3', t, 0.26, 0.55, sfxGain);
-            playNote('brass', 'A2', t, 0.26, 0.5, sfxGain);
-            playNote('bass', 'D3', t + 0.14, 0.32, 0.5, sfxGain);
+            playNote('pluck', 'A4', t, 0.18, 0.4, sfxGain);
+            playNote('pluck', 'F#4', t + 0.1, 0.22, 0.38, sfxGain);
+            poof(t + 0.05, 0.35, sfxGain);
         },
 
+        // A magic wand "whoosh" (fast ascending harp run) landing on a big
+        // bright chord, then a sparkle cascade trailing off like falling
+        // fairy dust -- a proper celebratory fanfare, not just four notes.
         win: function () {
             var t = now(0.005); if (!t) return;
-            var notes = ['C5', 'E5', 'G5', 'C6'];
-            for (var i = 0; i < notes.length; i++) {
-                playNote('brass', notes[i], t + i * 0.13, 0.28, 0.8, sfxGain);
-                playNote('bell', notes[i], t + i * 0.13, 0.35, 0.5, sfxGain);
+            var runNotes = ['D5', 'E5', 'F#5', 'G5', 'A5', 'B5', 'C#6', 'D6'];
+            for (var i = 0; i < runNotes.length; i++) {
+                playNote('harp', runNotes[i], t + i * 0.045, 0.12, 0.5, sfxGain);
             }
-            kick(t, 0.7, sfxGain);
-            kick(t + 0.26, 0.6, sfxGain);
-            shimmer(t + 0.4, 0.6, sfxGain);
-            shimmer(t + 0.55, 0.5, sfxGain);
+            var landT = t + runNotes.length * 0.045 + 0.05;
+            ['D5', 'F#5', 'A5', 'D6'].forEach(function (note) {
+                playNote('brass', note, landT, 0.5, 0.7, sfxGain);
+                playNote('chime', note, landT, 0.9, 0.45, sfxGain);
+            });
+            kick(landT, 0.6, sfxGain);
+            sparkleRun(landT + 0.15, ['D6', 'C#6', 'B5', 'A5', 'G5', 'F#5', 'E5', 'D5'], 0.09, 0.32, sfxGain);
+            shimmer(landT + 0.05, 0.6, sfxGain);
+            shimmer(landT + 0.3, 0.5, sfxGain);
+            shimmer(landT + 0.55, 0.4, sfxGain);
         },
 
+        // Warm and gentle, resolving on a major chord (never minor/somber)
+        // -- encouraging, not a "failure" sound.
         tryAgain: function () {
             var t = now(0.005); if (!t) return;
-            playNote('pad', 'A3', t, 0.5, 0.4, sfxGain);
-            playNote('pluck', 'F4', t, 0.3, 0.5, sfxGain);
-            playNote('pluck', 'D4', t + 0.22, 0.4, 0.45, sfxGain);
+            playNote('pad', 'A3', t, 0.6, 0.35, sfxGain);
+            playNote('pluck', 'F#4', t, 0.3, 0.45, sfxGain);
+            playNote('pluck', 'D4', t + 0.18, 0.35, 0.42, sfxGain);
+            playNote('chime', 'A4', t + 0.32, 0.6, 0.3, sfxGain);
+            shimmer(t + 0.4, 0.35, sfxGain);
         }
     };
 })();
