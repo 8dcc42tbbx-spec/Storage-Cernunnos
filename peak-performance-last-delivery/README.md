@@ -4,11 +4,34 @@
 Australia Post delivery van, racing the clock on Christmas Eve to deliver the
 last parcel before the world closes down for Christmas.
 
-This document is the design plan only — no game code exists yet. It's written
-to be handed straight to implementation, following the same conventions as
-the other games in this repo (self-contained folder, vanilla-JS canvas
-namespace, `prompts/` folder for art generation). See
-`prompts/art-prompts.md` for the companion SNES-style art generation prompts.
+This document is the design plan; it now sits alongside a playable
+implementation of it, following the same conventions as the other games in
+this repo (self-contained folder, vanilla-JS canvas namespace, `prompts/`
+folder for art generation). See `prompts/art-prompts.md` for the companion
+SNES-style art generation prompts, and `coach-lines.md` for Coach's full
+line pool.
+
+## Play it
+
+Open `index.html` in a browser (or serve the folder, e.g.
+`python3 -m http.server`, if your browser blocks `file://`). No build step.
+
+The game is fully playable right now with procedural placeholder graphics
+(flat-shaded canvas shapes in each leg's palette) rather than the real
+SNES-style art from `prompts/art-prompts.md` — same approach this repo's
+`trivia-trixie` takes before its art gets generated and dropped in.
+Everything described below is implemented: the pseudo-3D chase-cam road
+across all five legs, steering/accel/brake physics with off-road penalty,
+traffic passing and collision, checkpoints, the countdown-clock endurance
+loop, Coach's radio popups (from `coach-lines.md`), day/weather progression
+per leg, and the Enduro-modelled Web Audio soundscape. Desktop uses
+arrows/WASD to steer, Up to accelerate, Down to brake, Space to honk, Enter
+to start/continue; iPad/touch uses drag-to-steer on the left/upper screen
+and hold-to-go / hold-to-brake zones bottom-right/bottom-left (see sec 6).
+
+Difficulty/pacing constants (traffic density, collision penalties, time
+bonuses, curviness) live in `js/constants.js` and are intentionally a first
+pass, tunable without touching game logic.
 
 ---
 
