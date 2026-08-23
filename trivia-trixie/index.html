@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Trivia Trixie's Wishing Quiz</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="stage">
+        <div id="scene-bg">
+            <video id="ending-video" muted loop playsinline></video>
+        </div>
+        <div id="sparkle-field"></div>
+
+        <button id="btn-mute" aria-label="Mute music">🔊</button>
+
+        <header id="topbar" class="hidden">
+            <div id="progress-track"></div>
+            <div id="score-badge">Score: <span id="score-num">0</span></div>
+        </header>
+
+        <main id="content">
+
+            <section id="screen-title" class="screen">
+                <div class="trixie-wrap" data-mood="sleepy">
+                    <img class="trixie-img" alt="Trivia Trixie the Fabulous Fairy">
+                    <div class="trixie-fallback">🧚‍♀️</div>
+                </div>
+                <p class="speech-bubble" id="trixie-title-bubble"></p>
+                <div id="title-logo">
+                    <img class="title-logo-img" alt="Trivia Trixie's Wishing Quiz">
+                    <div class="title-logo-fallback">Trivia Trixie's<br>Wishing Quiz</div>
+                </div>
+                <p class="tagline">Answer 7 out of 10 questions correctly, and Trixie will grant you a magical wish! ✨</p>
+                <button id="btn-start" class="btn-primary">Start the Show!</button>
+                <button id="btn-fullscreen" class="btn-secondary">⛶ Fullscreen</button>
+            </section>
+
+            <section id="screen-question" class="screen hidden">
+                <div class="category-chip" id="category-label"></div>
+                <div class="trixie-wrap small" id="trixie-question" data-mood="idle">
+                    <img class="trixie-img" alt="Trivia Trixie the Fabulous Fairy">
+                    <div class="trixie-fallback">🧚‍♀️</div>
+                </div>
+                <p class="speech-bubble" id="trixie-question-bubble"></p>
+                <div class="question-card">
+                    <p id="question-counter"></p>
+                    <h2 id="question-text"></h2>
+                    <div id="answers-grid"></div>
+                </div>
+            </section>
+
+            <section id="screen-results" class="screen hidden">
+                <div class="trixie-wrap big" id="trixie-results" data-mood="cheer">
+                    <img class="trixie-img" alt="Trivia Trixie the Fabulous Fairy">
+                    <div class="trixie-fallback">🧚‍♀️</div>
+                </div>
+                <h2 id="results-heading"></h2>
+                <p id="results-score"></p>
+                <p class="speech-bubble" id="results-message"></p>
+                <button id="btn-again" class="btn-primary">Play Again</button>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="js/constants.js"></script>
+    <script src="js/questions.js"></script>
+    <script src="js/dialogue.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

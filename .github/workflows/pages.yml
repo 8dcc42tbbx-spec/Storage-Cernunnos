@@ -1,0 +1,57 @@
+name: Publish to GitHub Pages
+
+# Keeps the public site in sync with this branch. Pages is served from the
+# gh-pages branch, so this just rebuilds that branch's contents -- it needs
+# only contents:write, not the Pages admin API (which the workflow token
+# isn't allowed to call).
+#
+# Note: gh-pages is shared across every game branch in this repo (each has
+# its own copy of this workflow, scoped to its own branch). Whichever branch
+# pushes last "wins" the live site -- there's only one gh-pages slot.
+
+on:
+  push:
+    branches: [claude/trivia-trixie-game-8eba5q]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Only what the game needs -- no prompt notes or docs.
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          cp trivia-trixie/index.html site/
+          cp -r trivia-trixie/css site/
+          cp -r trivia-trixie/js site/
+          cp -r trivia-trixie/assets site/
+          touch site/.nojekyll
+
+          # Cache-bust every local <script src> / <link href> with this
+          # commit's short SHA, so a browser (or GitHub's edge cache) that
+          # already has an old js/css file cached is forced to fetch the new
+          # one instead of silently reusing stale audio/game logic.
+          SHORT_SHA="${GITHUB_SHA::8}"
+          sed -i -E "s#(src|href)=\"(css|js)/([^\"]+)\"#\1=\"\2/\3?v=${SHORT_SHA}\"#g" site/index.html
+
+      - name: Push to gh-pages
+        run: |
+          cd site
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Publish ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
