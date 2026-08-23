@@ -365,11 +365,80 @@ horror-movie dark. No text. 256x144 pixels, opaque full-frame background.
 
 ---
 
+## Prompt 12: Coach — Title Screen Illustration
+**Save as: `assets/coach_title.png`**
+
+```
+Art style: SNES-era 16-bit character illustration (Top Gear / F-Zero /
+Rock n' Roll Racing, 1991-1993 title-screen quality). Chunky confident
+pixel art, 1px dark outline, dithered gradient shading, saturated colour
+palette, no modern anti-aliasing or glow. Transparent background. NO
+text, NO labels anywhere on the image.
+
+Character: "Coach", an Australia Post depot supervisor for the
+Christmas "Peak" season. Woman with dark hair pulled up into a high bun,
+warm confident open-mouthed smile, mid-call-out expression. Wearing a
+red zip-up track jacket with white piping down each sleeve, a white
+t-shirt underneath, a whistle on a lanyard, and a small circular
+Australia Post logo patch on the right chest. Standing at a
+three-quarter angle, one hand on her hip, the other raised holding a
+white megaphone with a red bell, as if calling out to someone driving
+away from her.
+
+Pose and framing: waist-up to just-above-the-knees, angled so she reads
+as looking out toward the bottom-right of the frame (toward where a
+delivery van would be pulling away in a composited title screen). Warm
+dusk rim-lighting on her hair and shoulder from one side, consistent
+with a depot-at-dusk setting.
+
+Output: single PNG, 120x160 pixels, transparent background, character
+only (no background elements, no depot props) so it can be composited
+over a separate title background. No text.
+```
+
+---
+
+## Prompt 13: Coach — In-Game Radio Portrait Sheet
+**Save as: `assets/coach_portrait.png`**
+
+```
+Art style: SNES-era 16-bit dialogue/portrait art (the small talking-head
+boxes used in SNES RPGs and racing-game pit-crew call-ins). Chunky
+pixel art, 1px dark outline, dithered gradient shading, saturated
+colour palette, no modern anti-aliasing or glow. Transparent background.
+NO text, NO labels.
+
+Character: "Coach" (see title-screen prompt for full description — dark
+hair in a high bun, red Australia Post track jacket with white sleeve
+piping, circular logo patch), shown here as a head-and-shoulders bust
+portrait only, front-on, filling most of each grid cell, consistent
+proportions and framing across every cell so they can be swapped frame
+-to-frame without jittering.
+
+Strict grid, 40x40 pixels per frame, 2 columns x 3 rows (mouth-closed
+frame in column 1, mouth-open/talking frame in column 2, for each
+expression row):
+Row 1 - NEUTRAL/SUPPORTIVE: warm, calm, encouraging half-smile. Column 1
+mouth closed, column 2 mouth open mid-word.
+Row 2 - PUMPED/EXCITED: big open grin, eyebrows raised, genuinely
+delighted. Column 1 mouth closed (big smile), column 2 mouth wide open
+(cheering).
+Row 3 - ALERT/WARNING: eyebrows drawn in, focused urgent expression,
+leaning slightly toward camera. Column 1 mouth closed (tense), column 2
+mouth open (calling out a warning).
+
+Output: single PNG, 80x120 pixels (2 columns x 3 rows of 40x40),
+transparent background. No text.
+```
+
+---
+
 ## How to use
 
 1. Copy the **Style Guide** block and paste it at the start of every
-   prompt (except Prompt 11, which already embeds full scene descriptions
-   and intentionally breaks from the tile-grid framing).
+   prompt (except Prompts 11-13, which already embed their own style/scene
+   descriptions inline and intentionally break from the tile-grid
+   framing).
 2. Generate each prompt and save the output PNG under the exact filename
    listed — this keeps them drop-in compatible with the module layout
    suggested in `../README.md` §9 once the game is implemented.
@@ -377,3 +446,6 @@ horror-movie dark. No text. 256x144 pixels, opaque full-frame background.
    *technique* (same band heights, same alternating-shade road banding)
    even as palette and mood shift leg to leg — that consistency is what
    sells the single continuous evening the countdown clock is tracking.
+4. Generate Coach (Prompts 12-13) after the title/cutscene art (Prompt
+   11) and check her against it side by side — she should read as the
+   same character in both, just at different scales and framing.

@@ -152,18 +152,71 @@ You play the driver of a single Australia Post van (design continuity nod:
 this can visually reuse the *eDV*-style electric delivery vehicle silhouette
 established in this repo's sibling game, `../assets/edv.png`/`../prompts/`,
 re-rendered at SNES fidelity — see the art prompts) on the last run of
-Christmas Eve. Dispatch radio crackles a line or two of flavour text
-between legs (rendered as a HUD ticker, not voiced — keeps scope small):
-depot control confirming the address, a joke about the weather, a "you've
-got this" at the top of leg 5. The mountain-town leg (leg 4) gets one
-line acknowledging its own implausibility in-universe ("Yeah, I know it
-doesn't usually snow here either — just get up the hill") rather than
-pretending an Australian Christmas is a white one by default; that keeps
-the tonal joke intentional rather than a geography error.
+Christmas Eve. Every line of flavour text and every hint the player gets
+comes from one character — **Coach** — who's on the depot radio for the
+whole shift.
 
 Ending beat (leg 5 clear): the van pulls into a driveway, porch light on,
 a silhouette in the window — parcel delivered, cut to black, "Merry
-Christmas" over the results screen.
+Christmas" over the results screen, Coach's last line of the run over the
+top of it.
+
+### Coach
+
+Modelled directly on Australia Post's real "Peak" campaign coach
+character (red Australia Post track jacket, "COACH" across the chest,
+white piping down the sleeves, the circular Australia Post logo patch,
+hair up in a high bun, whistle on a lanyard, a megaphone she reaches for
+when she means it) — she's the depot's Peak-season hype coach, the one
+who gets everyone through the Christmas rush, and tonight she's the only
+voice this driver's got. This also makes the title a deliberate double
+meaning rather than a generic sports phrase: *Peak Performance* is both
+"drive well" and a direct nod to Australia Post's own name for the
+Christmas delivery crunch, "Peak" — Coach is, in-universe, the actual
+Peak coach.
+
+**Where she appears:**
+- **Title screen** — foreground illustration, layered over the depot
+  background art, megaphone half-raised, addressing the player directly
+  before the run starts (see `prompts/art-prompts.md` for the title
+  illustration and how it composites with `scene_title.png`).
+- **In-game radio popups** — a small portrait box (see HUD note below)
+  that slides in with a burst of radio static, holds for a couple of
+  seconds while a caption line prints, then slides back out. She never
+  takes over the driving view — this is Enduro's fixed-perspective rule
+  again, applied to the UI: nothing is allowed to break the chase-cam.
+  Trigger points, roughly in order of how often they fire:
+  - **Leg start** — one hype line setting up what's changing (traffic
+    density, the new hazard, the new condition).
+  - **First sight of a leg's new hazard** — a heads-up line, timed to the
+    hazard's first spawn (e.g. first kangaroo: "Roos love this stretch,
+    watch the tree line").
+  - **Milestone/checkpoint clear** — a short, genuinely pumped line,
+    reusing her most excited portrait expression.
+  - **Low-clock warning** (clock under a threshold, e.g. 30 in-fiction
+    "minutes") — one urgent line, at most once per leg so it doesn't nag.
+  - **Leg clear** — proud, sets up the next leg.
+  - **Run end** — a warm line either way: cheering the delivery home on
+    success, or on failure staying supportive rather than mocking ("Not
+    tonight, driver — but you got further than you think. Go again?").
+- She does **not** appear mid-hazard or stacked with the milestone banner
+  from §6 — only one HUD interruption on screen at a time, milestone
+  banner takes priority if both would fire the same frame.
+
+**Voice, not VO:** lines are printed captions, not recorded speech —
+keeps this consistent with §7's "no sampled voice" rule for the
+soundscape. Her popup is instead sold through a short radio-static
+sting (see §7) and a simple two-frame mouth-open/mouth-closed talk cycle
+on the portrait, timed to roughly how long the caption takes to read —
+the same trick SNES-era dialogue portraits (RPG text boxes, pit-crew
+call-ins in racing games) used to make a static illustration feel like
+it's actually talking.
+
+The mountain-town leg (leg 4) gets one Coach line acknowledging its own
+implausibility in-universe ("Yeah, I know it doesn't usually snow here
+either — just get up the hill") rather than pretending an Australian
+Christmas is a white one by default; that keeps the tonal joke
+intentional rather than a geography error.
 
 ---
 
@@ -205,6 +258,13 @@ existing games' `hud.js`):**
 - Milestone banner: a brief full-width text/graphic overlay ("HIGHWAY
   CLEAR +0:45") on leg completion, styled after Enduro's own "extra car"
   and day-transition text cards.
+- Coach radio popup: a badge-framed portrait box, opposite corner from the
+  leg-progress pips so it never collides with them, with a caption line
+  beneath it in the same festive-banner styling as the milestone banner.
+  Slides in/out over roughly half a second; see §5 for trigger points and
+  §7 for its radio-static audio cue. Queued, not stacked — if two triggers
+  fire close together, the second waits rather than overlapping the
+  first.
 
 ---
 
@@ -236,6 +296,12 @@ We reproduce that *character*, not a literal chip register dump:
   in leg 2, volume scaling with weather intensity — the one texture
   Enduro's hardware couldn't do that we can now, used sparingly so it
   doesn't drift the game away from its source's austerity.
+- **Coach's radio sting:** a short burst of filtered white noise
+  (bandpass + a little amplitude wobble, the classic "walkie-talkie
+  keying up" texture) plays under every Coach popup from §5, instead of
+  any sampled voice. It's the audio equivalent of the two-frame talk
+  animation on her portrait — cheap, in-period, and it's doing the job a
+  VO line would do without breaking the "no sampled voice" rule below.
 - **Title/results screen:** a short, sparse chiptune sting (think Enduro's
   actual silence, split the difference by giving the *menus* a simple
   square-wave Christmas motif — four bars of "Jingle Bells" arranged for
@@ -290,6 +356,10 @@ are in `prompts/art-prompts.md`.
 7. Cutscene art — title screen (van pulling out of the depot at dusk),
    ending screen (porch delivery), fail screen (a house with the lights
    just going out).
+8. Coach — the depot radio host from §5: a foreground title-screen
+   illustration, and an in-HUD portrait sheet (neutral, pumped, and alert
+   expressions, each with a talking/mouth-closed frame pair for the
+   two-frame animation described in §5).
 
 ---
 
@@ -305,7 +375,9 @@ are in `prompts/art-prompts.md`.
   traffic movement/collision), `weather.js` (per-leg condition state
   machine + particle overlays), `hud.js`, `audio.js`, `menu.js`, `game.js`
   (state machine: menu → leg intro → driving → leg-clear/collision →
-  results).
+  results), `coach.js` (owns the §5 trigger table, a small line queue so
+  two popups never overlap, and the talk-frame animation timer for her
+  portrait).
 - **Christmas Eve cutscene art** (title/ending/fail screens) is the one
   category worth generating as illustrated full-frame art rather than
   tile/sprite sheets — see the last section of `prompts/art-prompts.md`.
