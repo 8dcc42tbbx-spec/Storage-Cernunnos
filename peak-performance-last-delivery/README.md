@@ -189,19 +189,46 @@ Peak coach.
   - **Leg start** — one hype line setting up what's changing (traffic
     density, the new hazard, the new condition).
   - **First sight of a leg's new hazard** — a heads-up line, timed to the
-    hazard's first spawn (e.g. first kangaroo: "Roos love this stretch,
-    watch the tree line").
+    hazard's first spawn.
   - **Milestone/checkpoint clear** — a short, genuinely pumped line,
     reusing her most excited portrait expression.
   - **Low-clock warning** (clock under a threshold, e.g. 30 in-fiction
     "minutes") — one urgent line, at most once per leg so it doesn't nag.
   - **Leg clear** — proud, sets up the next leg.
   - **Run end** — a warm line either way: cheering the delivery home on
-    success, or on failure staying supportive rather than mocking ("Not
-    tonight, driver — but you got further than you think. Go again?").
+    success, or staying supportive rather than mocking on failure.
 - She does **not** appear mid-hazard or stacked with the milestone banner
   from §6 — only one HUD interruption on screen at a time, milestone
   banner takes priority if both would fire the same frame.
+
+**Her lines: sport-and-Peak-season puns.** This is Coach's whole voice,
+not seasoning on top of it — every line runs fitness/sports-coaching
+language through Australia Post's Christmas "Peak" season and parcel
+delivery, the same way the title itself does. A few seed lines per
+trigger, to set the tone for the full line pool later:
+
+- *Leg start (leg 2, Highway Dash):* "Warm-up's done — this is your
+  first real interval, driver. Pace yourself, PB pending."
+- *First hazard sighting (leg 3, first kangaroo):* "Hurdles! Well...
+  roos. Same event, different track."
+- *Milestone/checkpoint clear:* "That's a personal best overtake! Feel
+  the burn? That's just Peak season — keep repping."
+- *Low-clock warning:* "The clock doesn't stretch for anyone, driver.
+  Final kilometres — dig deep."
+- *Leg clear:* "Set complete! Rest happens after Christmas, not before
+  it. Onto the next leg."
+- *Run end, success:* "Gold-medal delivery! That's how you finish a
+  Peak season — flying colours, right under the tree."
+- *Run end, failure:* "Didn't stick the landing tonight, but that's a
+  Peak-season effort right there. Go again?"
+- *Leg 4, mountain town (self-aware wink at the snow):* "Yeah, I know
+  it doesn't usually snow here either — call it a bonus interval.
+  Just get up the hill."
+
+Keep every line short enough to read in the couple of seconds the
+portrait's on screen, and keep the pun *legible* even to a player who
+isn't parsing it closely — the joke should land as tone (upbeat,
+sporty, a bit cheesy) even if the wordplay itself is missed.
 
 **Voice, not VO:** lines are printed captions, not recorded speech —
 keeps this consistent with §7's "no sampled voice" rule for the
@@ -211,12 +238,6 @@ on the portrait, timed to roughly how long the caption takes to read —
 the same trick SNES-era dialogue portraits (RPG text boxes, pit-crew
 call-ins in racing games) used to make a static illustration feel like
 it's actually talking.
-
-The mountain-town leg (leg 4) gets one Coach line acknowledging its own
-implausibility in-universe ("Yeah, I know it doesn't usually snow here
-either — just get up the hill") rather than pretending an Australian
-Christmas is a white one by default; that keeps the tonal joke
-intentional rather than a geography error.
 
 ---
 
