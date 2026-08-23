@@ -26,8 +26,9 @@ traffic passing and collision, checkpoints, the countdown-clock endurance
 loop, Coach's radio popups (from `coach-lines.md`), day/weather progression
 per leg, and the Enduro-modelled Web Audio soundscape. Desktop uses
 arrows/WASD to steer, Up to accelerate, Down to brake, Space to honk, Enter
-to start/continue; iPad/touch uses drag-to-steer on the left/upper screen
-and hold-to-go / hold-to-brake zones bottom-right/bottom-left (see sec 6).
+to start/continue; iPad/touch uses a translucent virtual joystick
+bottom-left to steer and a hold-to-go button bottom-right to accelerate
+(see sec 6).
 
 Difficulty/pacing constants (traffic density, collision penalties, time
 bonuses, curviness) live in `js/constants.js` and are intentionally a first
@@ -279,17 +280,23 @@ translated from raw key state each frame, so the same action layer can
 later accept gamepad with no game-logic changes, exactly as the existing
 game does.
 
-**iPad (touch):** Because the camera is fixed and the only inputs are
-steer/accelerate/brake, map controls to two zones rather than a virtual
-d-pad (a virtual d-pad is fiddly on glass and the brief specifically wants
-this playable, not just ported): left half of the screen = steer by
-horizontal touch position relative to a centre deadzone (drag left/right,
-van follows proportionally — closer to how players actually expect a
-driving touch control to feel than discrete left/right buttons); a single
-accelerate pedal (large lower-right touch zone, hold to go, release to
-coast, a smaller adjacent brake zone). Auto-detect touch vs. keyboard on
-boot the same way the canvas already resizes on `window.resize` in
-`index.html`, and swap the HUD's control hints accordingly.
+**iPad (touch):** a fixed translucent virtual joystick bottom-left for
+steering, and a hold-to-go button bottom-right for accelerate — drawn
+directly on the canvas, only while driving. The joystick base never moves;
+its nub tracks the finger that grabbed it (clamped to the base's radius)
+regardless of where in the whole bottom-left quadrant the touch started,
+so a thumb doesn't need to land precisely on the small drawn circle to
+grab it. There's no dedicated touch brake — releasing the accelerator
+coasts down the same way letting off the keyboard's Up arrow does; Down/S
+still brakes on desktop. An earlier version of this mapped steering to
+raw drag position anywhere on the left half of the screen, which read as
+imprecise on glass — a fixed on-screen joystick with a visible base and
+nub reads immediately as "this is the steering control" and is far easier
+to control by feel. Auto-detect touch vs. keyboard on boot the same way
+the canvas already resizes on `window.resize` in `index.html`; in touch
+mode the speedometer and Coach's popup relocate off the bottom corners
+(top-left and bottom-centre respectively) so nothing sits under the
+joystick or the go button.
 
 **HUD (SNES-style chrome, drawn in the same corner-anchored style as the
 existing games' `hud.js`):**

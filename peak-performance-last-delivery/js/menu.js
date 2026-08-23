@@ -50,7 +50,7 @@ PPLD.Menu = {
         ctx.font = '6px monospace';
         ctx.fillStyle = 'rgba(255,255,255,0.55)';
         ctx.fillText(PPLD.Input.touchMode ?
-            'Drag left/right to steer - bottom-right to go' :
+            'Joystick bottom-left to steer - hold GO to go' :
             'Arrows/WASD to steer - Up to go - Down to brake', C.CANVAS_W / 2, 214);
         ctx.textAlign = 'left';
     },

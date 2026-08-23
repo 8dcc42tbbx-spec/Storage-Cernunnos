@@ -6,6 +6,19 @@ PPLD.CONST = {
     CANVAS_W: 320,
     CANVAS_H: 224,
 
+    // Touch controls -- fixed translucent joystick (steer) bottom-left,
+    // accelerate button bottom-right. All in canvas-space pixels (the
+    // same 320x224 space everything else draws in). Grab/hold zones are
+    // deliberately much bigger than the visuals -- a full bottom-left/
+    // bottom-right quadrant each -- so a thumb doesn't need to land
+    // precisely on the small drawn circle.
+    TOUCH: {
+        ZONE_TOP_Y: 94,       // catch zones start below this y
+        ZONE_SPLIT_X: 160,    // left half = joystick catch, right = accel catch
+        JOY_CX: 50, JOY_CY: 168, JOY_R: 28, JOY_NUB_R: 13,
+        ACCEL_CX: 270, ACCEL_CY: 168, ACCEL_R: 30
+    },
+
     // Pseudo-3D segment-road projection (Enduro/OutRun-style chase cam)
     SEGMENT_LENGTH: 200,
     ROAD_WIDTH: 1600,

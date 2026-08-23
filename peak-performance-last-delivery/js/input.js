@@ -1,11 +1,22 @@
 // Peak Performance: Last Delivery -- input (keyboard + touch)
+//
+// Touch is a fixed translucent virtual joystick bottom-left (steer) and
+// a hold-to-go button bottom-right (accelerate) -- see README.md sec 6.
+// Grab/hold zones are generous (a whole screen quadrant each, see
+// constants.js CONST.TOUCH) so a thumb doesn't need to land precisely on
+// the small drawn circle; the joystick nub still tracks relative to its
+// fixed base once grabbed, wherever in the zone the touch started.
+// There's no dedicated touch brake -- releasing the accelerator coasts
+// down via COAST_DECEL, same as letting off the gas; Down/S still brakes
+// on keyboard.
 PPLD.Input = {
     keys: {},
     touchMode: false,
-    steerTouchId: null,
-    steerAxis: 0,       // -1..1
+    joystickTouchId: null,
+    joystickDX: 0,      // nub offset from centre, canvas-space px, for hud.js to draw
+    joystickDY: 0,
+    steerAxis: 0,        // -1..1
     accelTouch: false,
-    brakeTouch: false,
     startTouch: false,
 
     actions: {
@@ -29,9 +40,6 @@ PPLD.Input = {
             self.keys[e.code] = false;
         });
 
-        // Touch: left half of the canvas steers by touch position relative
-        // to centre; bottom-right = accelerate (hold); bottom-left small
-        // zone = brake. See README.md sec 6 for the layout rationale.
         canvas.addEventListener('touchstart', function (e) {
             self.touchMode = true;
             self.handleTouches(e, canvas);
@@ -52,32 +60,76 @@ PPLD.Input = {
     },
 
     handleTouches: function (e, canvas) {
+        var C = PPLD.CONST, T = C.TOUCH;
         var rect = canvas.getBoundingClientRect();
-        var w = rect.width, h = rect.height;
-        var steering = false, accel = false, brake = false, start = false;
-        var steerAxis = 0;
+        var scaleX = C.CANVAS_W / rect.width;
+        var scaleY = C.CANVAS_H / rect.height;
+        var i, t;
 
-        for (var i = 0; i < e.touches.length; i++) {
-            var t = e.touches[i];
-            var x = (t.clientX - rect.left) / w;   // 0..1
-            var y = (t.clientY - rect.top) / h;    // 0..1
+        this.startTouch = e.touches.length > 0;
 
-            if (y > 0.62 && x > 0.55) {
-                accel = true;
-            } else if (y > 0.62 && x < 0.30) {
-                brake = true;
-            } else if (y < 0.62) {
-                steering = true;
-                steerAxis = Math.max(-1, Math.min(1, (x - 0.5) / 0.42));
-            } else {
-                start = true;
+        // Release the joystick once its specific touch lifts.
+        var stillThere = false;
+        for (i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].identifier === this.joystickTouchId) { stillThere = true; break; }
+        }
+        if (this.joystickTouchId !== null && !stillThere) {
+            this.joystickTouchId = null;
+        }
+
+        // Grab a fresh joystick touch from the bottom-left catch zone if
+        // nothing's currently driving it.
+        if (this.joystickTouchId === null) {
+            for (i = 0; i < e.touches.length; i++) {
+                t = e.touches[i];
+                var gx = (t.clientX - rect.left) * scaleX;
+                var gy = (t.clientY - rect.top) * scaleY;
+                if (this.inJoystickZone(gx, gy)) { this.joystickTouchId = t.identifier; break; }
             }
         }
 
-        this.steerAxis = steering ? steerAxis : 0;
+        // Track the captured touch's live position relative to the fixed
+        // base, clamped to the visual radius -- this is what lets the nub
+        // drag smoothly even though the base itself never moves.
+        if (this.joystickTouchId !== null) {
+            for (i = 0; i < e.touches.length; i++) {
+                if (e.touches[i].identifier === this.joystickTouchId) { t = e.touches[i]; break; }
+            }
+            var px = (t.clientX - rect.left) * scaleX;
+            var py = (t.clientY - rect.top) * scaleY;
+            var dx = px - T.JOY_CX, dy = py - T.JOY_CY;
+            var dist = Math.sqrt(dx * dx + dy * dy) || 0.0001;
+            var clamped = Math.min(dist, T.JOY_R);
+            this.joystickDX = dx / dist * clamped;
+            this.joystickDY = dy / dist * clamped;
+            this.steerAxis = Math.max(-1, Math.min(1, dx / T.JOY_R));
+        } else {
+            this.joystickDX = 0;
+            this.joystickDY = 0;
+            this.steerAxis = 0;
+        }
+
+        // Accelerate: any touch other than the joystick's currently
+        // resting in the bottom-right catch zone.
+        var accel = false;
+        for (i = 0; i < e.touches.length; i++) {
+            t = e.touches[i];
+            if (t.identifier === this.joystickTouchId) continue;
+            var ax = (t.clientX - rect.left) * scaleX;
+            var ay = (t.clientY - rect.top) * scaleY;
+            if (this.inAccelZone(ax, ay)) { accel = true; break; }
+        }
         this.accelTouch = accel;
-        this.brakeTouch = brake;
-        this.startTouch = start;
+    },
+
+    inJoystickZone: function (x, y) {
+        var T = PPLD.CONST.TOUCH;
+        return x < T.ZONE_SPLIT_X && y > T.ZONE_TOP_Y;
+    },
+
+    inAccelZone: function (x, y) {
+        var T = PPLD.CONST.TOUCH;
+        return x >= T.ZONE_SPLIT_X && y > T.ZONE_TOP_Y;
     },
 
     poll: function () {
@@ -91,7 +143,7 @@ PPLD.Input = {
 
         this.actions.steer = steer;
         this.actions.accel = !!(this.keys['ArrowUp'] || this.keys['KeyW'] || this.accelTouch);
-        this.actions.brake = !!(this.keys['ArrowDown'] || this.keys['KeyS'] || this.brakeTouch);
+        this.actions.brake = !!(this.keys['ArrowDown'] || this.keys['KeyS']);
         this.actions.horn = !!this.keys['Space'];
         this.actions.start = !!(this.keys['Enter'] || this.startTouch);
         this.actions.pause = !!this.keys['Escape'];

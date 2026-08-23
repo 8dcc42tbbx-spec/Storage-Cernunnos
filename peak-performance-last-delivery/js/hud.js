@@ -37,6 +37,7 @@ PPLD.Hud = {
         this.drawClock(ctx, s);
         this.drawSpeedo(ctx, s);
         this.drawPips(ctx, s);
+        if (PPLD.Input.touchMode) this.drawTouchControls(ctx);
         if (this.bannerTimer > 0) this.drawBanner(ctx);
         if (s.coach && s.coach.current) this.drawCoachPopup(ctx, s.coach.current);
 
@@ -71,7 +72,10 @@ PPLD.Hud = {
 
     drawSpeedo: function (ctx, s) {
         var C = PPLD.CONST;
-        var cx = 26, cy = C.CANVAS_H - 26, r = 20;
+        // Bottom-left is the joystick's turf in touch mode -- tuck the
+        // dial up into the otherwise-empty top-left corner instead.
+        var touch = PPLD.Input.touchMode;
+        var cx = touch ? 22 : 26, cy = touch ? 34 : C.CANVAS_H - 26, r = touch ? 16 : 20;
         ctx.fillStyle = 'rgba(20,16,10,0.65)';
         ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#d8c8a0';
@@ -112,6 +116,57 @@ PPLD.Hud = {
         }
     },
 
+    // Translucent virtual joystick (steer) bottom-left + go button
+    // bottom-right -- see input.js for the matching hit-zone geometry
+    // and README.md sec 6 for the layout rationale.
+    drawTouchControls: function (ctx) {
+        var T = PPLD.CONST.TOUCH;
+        var In = PPLD.Input;
+
+        // Joystick base.
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(T.JOY_CX, T.JOY_CY, T.JOY_R, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+
+        // Joystick nub -- brighter while actively held.
+        var held = In.joystickTouchId !== null;
+        ctx.save();
+        ctx.globalAlpha = held ? 0.75 : 0.45;
+        ctx.fillStyle = held ? '#ffd166' : '#fff';
+        ctx.beginPath();
+        ctx.arc(T.JOY_CX + In.joystickDX, T.JOY_CY + In.joystickDY, T.JOY_NUB_R, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Accelerate button.
+        var pressed = In.accelTouch;
+        ctx.save();
+        ctx.globalAlpha = pressed ? 0.65 : 0.35;
+        ctx.fillStyle = pressed ? '#ffd166' : '#000';
+        ctx.beginPath();
+        ctx.arc(T.ACCEL_CX, T.ACCEL_CY, T.ACCEL_R, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = pressed ? '#ffd166' : '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.globalAlpha = 0.7;
+        ctx.fillStyle = pressed ? '#3a2a10' : '#fff';
+        ctx.font = 'bold 8px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('GO', T.ACCEL_CX, T.ACCEL_CY - 4);
+        ctx.textAlign = 'left';
+        ctx.restore();
+    },
+
     drawBanner: function (ctx) {
         var C = PPLD.CONST;
         var alpha = Math.min(1, this.bannerTimer / 0.3, (1.8 - this.bannerTimer) / 0.3 + 1);
@@ -137,8 +192,14 @@ PPLD.Hud = {
 
     drawCoachPopup: function (ctx, cur) {
         var C = PPLD.CONST;
-        var boxW = 150, boxH = 34;
-        var x = 4, y = C.CANVAS_H - boxH - 4;
+        var touch = PPLD.Input.touchMode;
+        // In touch mode the bottom corners belong to the joystick/go
+        // button, so the popup moves into the gap between them instead
+        // of hugging the bottom-left.
+        var boxW = touch ? 132 : 150;
+        var boxH = 34;
+        var x = touch ? (C.CANVAS_W - boxW) / 2 : 4;
+        var y = C.CANVAS_H - boxH - 4;
 
         ctx.save();
         ctx.fillStyle = C.COL.UI_BG;
