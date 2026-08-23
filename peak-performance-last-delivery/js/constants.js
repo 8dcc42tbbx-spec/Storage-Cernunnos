@@ -22,7 +22,11 @@ PPLD.CONST = {
     // Pseudo-3D segment-road projection (Enduro/OutRun-style chase cam)
     SEGMENT_LENGTH: 200,
     ROAD_WIDTH: 1600,
-    CAMERA_HEIGHT: 950,
+    // Calibrated against the 320x224 canvas so a car/hazard within a few
+    // hundred world units (i.e. anywhere near collision range) actually
+    // projects onto the visible screen instead of far below it -- see
+    // the "nothing visible" bug write-up in git history for the numbers.
+    CAMERA_HEIGHT: 240,
     FIELD_OF_VIEW: 110,
     DRAW_DISTANCE: 150,
     RUMBLE_LENGTH: 3,

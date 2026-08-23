@@ -161,7 +161,12 @@ PPLD.Road = {
 
         var maxy = height;
         var x = 0, dx = -(baseSegment.curve * basePercent);
-        var drawn = [];
+        // Every segment the loop actually reaches gets pushed here, even
+        // ones whose road polygon is culled (the player's own current
+        // segment always is, since the camera sits inside it -- see
+        // below) -- entities can still be bucketed into a culled segment
+        // and need a valid projection to draw from.
+        var reached = [];
 
         var n, segIdx;
         for (n = 0; n < C.DRAW_DISTANCE; n++) {
@@ -174,6 +179,16 @@ PPLD.Road = {
             this.project(segment.p2, world.playerX * roadWidth - (x + dx), C.CAMERA_HEIGHT,
                 world.playerZ, width, height, roadWidth);
 
+            // The curve offset in effect for THIS segment's near edge --
+            // stashed so entities bucketed here can be projected
+            // individually later (see drawSprite) rather than reusing
+            // p1's own screen position, which is degenerate for the
+            // segment the camera is currently inside (its near edge is
+            // behind the camera by definition, since the camera sits
+            // partway through it, not at its start).
+            segment.curveOffsetX = x;
+            reached.push(segment);
+
             x += dx;
             dx += segment.curve;
 
@@ -185,19 +200,16 @@ PPLD.Road = {
 
             var depthT = Math.max(0, Math.min(1, n / C.DRAW_DISTANCE));
             this.drawSegment(ctx, segment, leg, width, maxy, depthT);
-            drawn.push({ segment: segment, depthT: depthT });
 
             maxy = segment.p2.screen.y;
         }
 
-        // Draw sprites back-to-front (farthest segment first == reverse
-        // of the loop we just ran, since we rendered near->far... draw in
-        // reverse of `drawn`, i.e. far segments were pushed last-ish? We
-        // rendered near(n=0)->far, so `drawn` is already near-to-far;
-        // sprites must paint far-to-near so nearer ones occlude farther
-        // ones correctly.
-        for (n = drawn.length - 1; n >= 0; n--) {
-            this.drawSegmentEntities(ctx, drawn[n].segment, width);
+        // Draw sprites far-to-near (reverse of the near->far loop above)
+        // so nearer ones occlude farther ones correctly. Every reached
+        // segment participates, not just the ones whose road polygon
+        // got drawn -- see the comment on `reached` above.
+        for (n = reached.length - 1; n >= 0; n--) {
+            this.drawSegmentEntities(ctx, reached[n], width, world, roadWidth);
         }
 
         this.clearBuckets();
@@ -274,23 +286,33 @@ PPLD.Road = {
         }
     },
 
-    drawSegmentEntities: function (ctx, segment, width) {
-        var p = segment.p1.screen;
+    drawSegmentEntities: function (ctx, segment, width, world, roadWidth) {
         var i;
         for (i = 0; i < segment.hazards.length; i++) {
-            this.drawSprite(ctx, segment, segment.hazards[i], width, 'hazard');
+            this.drawSprite(ctx, segment, segment.hazards[i], width, 'hazard', world, roadWidth);
         }
         for (i = 0; i < segment.cars.length; i++) {
-            this.drawSprite(ctx, segment, segment.cars[i], width, 'car');
+            this.drawSprite(ctx, segment, segment.cars[i], width, 'car', world, roadWidth);
         }
     },
 
-    drawSprite: function (ctx, segment, entity, width, kind) {
-        var scale = segment.p1.screen.scale;
+    // Projects the entity using its OWN world.z, not the containing
+    // segment's p1 -- reusing p1 as a stand-in (the common shortcut in
+    // this style of renderer) breaks down specifically for the segment
+    // the camera currently sits inside, whose near edge is behind the
+    // camera by construction and projects nowhere near the entity's
+    // actual on-screen position. This is exactly the segment most
+    // traffic/hazard collisions happen in, which is why it read as
+    // "hitting things with nothing visible" before this fix.
+    drawSprite: function (ctx, segment, entity, width, kind, world, roadWidth) {
+        var p = { world: { z: entity.z }, camera: {}, screen: {} };
+        this.project(p, world.playerX * roadWidth - segment.curveOffsetX, PPLD.CONST.CAMERA_HEIGHT,
+            world.playerZ, width, PPLD.CONST.CANVAS_H, roadWidth);
+
+        var scale = p.screen.scale;
         if (!scale || scale <= 0) return;
-        var roadCenterX = segment.p1.screen.x;
-        var spriteX = roadCenterX + (scale * entity.x * PPLD.CONST.ROAD_WIDTH * width / 2);
-        var spriteY = segment.p1.screen.y;
+        var spriteX = p.screen.x + (scale * entity.x * roadWidth * width / 2);
+        var spriteY = p.screen.y;
         var spriteScale = scale * 1.6;
         var w = entity.w * spriteScale, h = entity.h * spriteScale;
         if (w < 1 || h < 1) return;
