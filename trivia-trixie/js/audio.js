@@ -73,7 +73,11 @@ TT.Audio = (function () {
         pluck: { ratio: 2.0,  index: 2.0, indexDecay: 0.05, iDec: 0.16, atk: 0.002, dec: 0.20, sus: 0.05, rel: 0.20, gain: 0.32 },
         brass: { ratio: 1.0,  index: 1.6, indexDecay: 0.35, iDec: 0.20, atk: 0.02,  dec: 0.12, sus: 0.72, rel: 0.14, gain: 0.32, spread: 6 },
         bass:  { ratio: 1.0,  index: 1.2, indexDecay: 0.12, iDec: 0.14, atk: 0.004, dec: 0.10, sus: 0.55, rel: 0.10, gain: 0.46 },
-        pad:   { ratio: 1.005, index: 0.6, indexDecay: 0.6, iDec: 1.1,  atk: 0.35,  dec: 0.6,  sus: 0.70, rel: 1.1,  gain: 0.18, spread: 9 }
+        pad:   { ratio: 1.005, index: 0.6, indexDecay: 0.6, iDec: 1.1,  atk: 0.35,  dec: 0.6,  sus: 0.70, rel: 1.1,  gain: 0.18, spread: 9 },
+        // Churchy, slightly detuned/chorused -- the funeral-march ending.
+        organ: { ratio: 2.0,  index: 0.9, indexDecay: 0.65, iDec: 0.9,  atk: 0.05,  dec: 0.3,  sus: 0.78, rel: 0.55, gain: 0.24, spread: 4 },
+        // Deep, dissonant-ratio, very long ring -- a tolling bell/gong.
+        toll:  { ratio: 1.41, index: 3.4, indexDecay: 0.02, iDec: 1.6,  atk: 0.003, dec: 1.7,  sus: 0.04, rel: 1.6,  gain: 0.42 }
     };
 
     function fmNote(inst, f, t, dur, vel, bus) {
@@ -137,6 +141,32 @@ TT.Audio = (function () {
         o.start(t); o.stop(t + 0.28);
     }
 
+    // Disco hi-hat -- a short (or, if open, slightly longer) burst of
+    // high-passed noise.
+    function hat(t, vel, bus, open) {
+        var a = ctx();
+        var s = a.createBufferSource(); s.buffer = noise();
+        var hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 8500;
+        var g = a.createGain();
+        var d = open ? 0.2 : 0.045;
+        g.gain.setValueAtTime(Math.max((vel || 0.35) * 0.32, 0.0001), t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+        s.connect(hp); hp.connect(g); g.connect(bus || sfxGain);
+        s.start(t); s.stop(t + d + 0.02);
+    }
+
+    // Disco backbeat clap -- band-passed noise, punchier and lower than the hat.
+    function clap(t, vel, bus) {
+        var a = ctx();
+        var s = a.createBufferSource(); s.buffer = noise();
+        var bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 1.1;
+        var g = a.createGain();
+        g.gain.setValueAtTime(Math.max((vel || 0.5) * 0.4, 0.0001), t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        s.connect(bp); bp.connect(g); g.connect(bus || sfxGain);
+        s.start(t); s.stop(t + 0.2);
+    }
+
     // A quick burst of high-passed noise -- fairy-dust "sparkle" texture
     // layered under bells/chimes on delightful moments.
     function shimmer(t, vel, bus) {
@@ -186,6 +216,12 @@ TT.Audio = (function () {
         pitches.forEach(function (p, i) {
             if (p) out.push([beat + i * step, dur || step, inst, p, vel === undefined ? 1 : vel]);
         });
+        return out;
+    }
+    // Repeats a drum hit ('kick' | 'hat' | 'hatO' | 'clap') every `every`
+    // beats, `count` times. Pitch is irrelevant for these, so it's omitted.
+    function beatline(out, beat, every, count, name, vel) {
+        for (var i = 0; i < count; i++) out.push([beat + i * every, 0, name, null, vel]);
         return out;
     }
 
@@ -282,12 +318,98 @@ TT.Audio = (function () {
         MUSIC.question = { bpm: 100, len: 8, loop: true, notes: n };
     })();
 
+    // ENDING: PERFECT -- "Fairy Disco". A funky 8-bar groove in A natural
+    // minor (i-VII-VI-v: Am-G-F-Em, 2 bars per chord), four-on-the-floor
+    // kick, backbeat claps, 8th-note hats, a walking octave bass line, and
+    // disco "string stab" chime chords on the off-beats -- with sparkle
+    // flourishes at each chord change to keep it unmistakably fairy, not
+    // just generic funk.
+    (function () {
+        var n = [];
+        var CHORDS = [
+            { bar: 0, bass: ['A2', 'A3', 'A2', 'E3', 'A2', 'A3', 'G2', 'A2'], stab: ['C5', 'E5'] },
+            { bar: 2, bass: ['G2', 'G3', 'G2', 'D3', 'G2', 'G3', 'F2', 'G2'], stab: ['B4', 'D5'] },
+            { bar: 4, bass: ['F2', 'F3', 'F2', 'C3', 'F2', 'F3', 'E2', 'F2'], stab: ['A4', 'C5'] },
+            { bar: 6, bass: ['E2', 'E3', 'E2', 'B2', 'E2', 'E3', 'D2', 'E2'], stab: ['G4', 'B4'] }
+        ];
+        CHORDS.forEach(function (c) {
+            for (var half = 0; half < 2; half++) {
+                var beat = (c.bar + half) * 4;
+                run(n, beat, 0.5, 'bass', c.bass, 0.4, 0.45);
+                // string-stab chime chord on all four off-beats of this bar
+                [0.5, 1.5, 2.5, 3.5].forEach(function (off) {
+                    seq(n, beat + off, 0.4, 'chime', c.stab, 0.2);
+                });
+            }
+        });
+        beatline(n, 0, 1, 32, 'kick', 0.85);
+        beatline(n, 0, 0.5, 64, 'hat', 0.28);
+        beatline(n, 1, 4, 8, 'clap', 0.5);
+        beatline(n, 3, 4, 8, 'clap', 0.5);
+        // sparkle flourish at each chord change (every 2 bars)
+        [0, 8, 16, 24].forEach(function (beat) {
+            run(n, beat, 0.06, 'chime', ['A5', 'C6', 'E6'], 0.2, 0.18);
+        });
+        // a catchy little hook over the Am and F sections
+        run(n, 0, 1, 'harp', ['E5', 'C5', 'E5', 'A4'], 0.3, 0.8);
+        run(n, 16, 1, 'harp', ['F5', 'C5', 'A4', 'C5'], 0.3, 0.8);
+        MUSIC.endingPerfect = { bpm: 120, len: 32, loop: true, notes: n };
+    })();
+
+    // ENDING: WIN -- "Magical Wonderland". Dreamy and sparkly rather than
+    // driving: a lush 4-bar pad progression (C-Am-F-G) with a continuous
+    // chime arpeggio cascading through each chord and a slow harp melody
+    // drifting on top, plus the faintest hint of a pulse instead of a
+    // full beat.
+    (function () {
+        var n = [];
+        var CHORDS = [
+            { bar: 0, pad: ['C3', 'E3', 'G3'], arp: ['C4', 'E4', 'G4', 'C5', 'G4', 'E4', 'C4', 'E4'], mel: 'G5' },
+            { bar: 1, pad: ['A2', 'C3', 'E3'], arp: ['A3', 'C4', 'E4', 'A4', 'E4', 'C4', 'A3', 'C4'], mel: 'E5' },
+            { bar: 2, pad: ['F2', 'A2', 'C3'], arp: ['F3', 'A3', 'C4', 'F4', 'C4', 'A3', 'F3', 'A3'], mel: 'A5' },
+            { bar: 3, pad: ['G2', 'B2', 'D3'], arp: ['G3', 'B3', 'D4', 'G4', 'D4', 'B3', 'G3', 'B3'], mel: 'B5' }
+        ];
+        CHORDS.forEach(function (c) {
+            var beat = c.bar * 4;
+            seq(n, beat, 3.8, 'pad', c.pad, 0.16);
+            run(n, beat, 0.5, 'chime', c.arp, 0.16, 0.55);
+            seq(n, beat, 3.5, 'harp', c.mel, 0.22);
+        });
+        seq(n, 0, 0.6, 'chime', 'C7', 0.14);
+        seq(n, 8, 0.6, 'chime', 'F6', 0.14);
+        beatline(n, 0, 8, 2, 'kick', 0.22);
+        MUSIC.endingWin = { bpm: 92, len: 16, loop: true, notes: n };
+    })();
+
+    // ENDING: LOSE -- a gentle, tongue-in-cheek "funeral march" pastiche:
+    // slow tempo, D minor, a tolling bell once per bar, a sparse low drone,
+    // and an insistent repeated-note organ melody that dips down and back.
+    // Played for comic dramatic effect, not to actually upset -- the
+    // on-screen heading and Trixie's own line right next to it stay warm
+    // and encouraging regardless.
+    (function () {
+        var n = [];
+        seq(n, 0, 15.5, 'pad', ['D3', 'F3', 'A3'], 0.12);
+        run(n, 0, 1, 'organ', ['D4', 'D4', 'D4', 'D4'], 0.5, 0.9);
+        run(n, 4, 1, 'organ', ['C4', 'Bb3', 'A3', 'A3'], 0.48, 0.9);
+        run(n, 8, 1, 'organ', ['D4', 'D4', 'D4', 'D4'], 0.5, 0.9);
+        seq(n, 12, 3.5, 'organ', 'D4', 0.45);
+        run(n, 0, 4, 'toll', ['D2', 'D2', 'D2', 'D2'], 0.5, 3.2);
+        run(n, 0, 2, 'bass', ['D2', 'D2', 'D2', 'D2', 'D2', 'D2', 'D2', 'D2'], 0.4, 1.6);
+        MUSIC.endingLose = { bpm: 56, len: 16, loop: true, notes: n };
+    })();
+
     function scheduleIteration(track, startTime, gen, bus) {
         var beat = 60 / track.bpm;
         track.notes.forEach(function (ev) {
             var t = startTime + ev[0] * beat;
             var dur = ev[1] * beat;
-            playNote(ev[2], ev[3], t, dur, ev[4], bus);
+            var inst = ev[2];
+            if (inst === 'kick') kick(t, ev[4], bus);
+            else if (inst === 'hat') hat(t, ev[4], bus, false);
+            else if (inst === 'hatO') hat(t, ev[4], bus, true);
+            else if (inst === 'clap') clap(t, ev[4], bus);
+            else playNote(inst, ev[3], t, dur, ev[4], bus);
         });
         if (track.loop) {
             var loopDur = track.len * beat;
@@ -431,17 +553,6 @@ TT.Audio = (function () {
             shimmer(landT + 0.05, 0.6, sfxGain);
             shimmer(landT + 0.3, 0.5, sfxGain);
             shimmer(landT + 0.55, 0.4, sfxGain);
-        },
-
-        // Warm and gentle, resolving on a major chord (never minor/somber)
-        // -- encouraging, not a "failure" sound.
-        tryAgain: function () {
-            var t = now(0.005); if (!t) return;
-            playNote('pad', 'A3', t, 0.6, 0.35, sfxGain);
-            playNote('pluck', 'F#4', t, 0.3, 0.45, sfxGain);
-            playNote('pluck', 'D4', t + 0.18, 0.35, 0.42, sfxGain);
-            playNote('chime', 'A4', t + 0.32, 0.6, 0.3, sfxGain);
-            shimmer(t + 0.4, 0.35, sfxGain);
         }
     };
 })();

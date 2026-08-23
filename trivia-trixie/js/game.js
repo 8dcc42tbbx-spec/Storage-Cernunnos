@@ -460,7 +460,12 @@ TT.Game = {
             ? "linear-gradient(160deg, #4a3a6a, #241338)"
             : "linear-gradient(160deg, #ff5da2, #5b2a86)");
 
-        if (!win) TT.Audio.tryAgain();
+        // Each ending tier gets its own looping theme: a fairy disco for a
+        // perfect score, a dreamy "magical wonderland" for a regular win,
+        // and a gentle, tongue-in-cheek funeral march for a loss -- started
+        // right away rather than waiting on art/video to resolve below.
+        var endingMusicKey = tier === "perfect" ? "endingPerfect" : (tier === "win" ? "endingWin" : "endingLose");
+        TT.Audio.playMusic(endingMusicKey);
 
         // The painted/filmed ending scenes already depict Trixie full-size
         // and centered, so the small foreground mood portrait would float
