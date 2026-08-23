@@ -230,6 +230,10 @@ portrait's on screen, and keep the pun *legible* even to a player who
 isn't parsing it closely — the joke should land as tone (upbeat,
 sporty, a bit cheesy) even if the wordplay itself is missed.
 
+The full line pool (every trigger above, including per-leg hazard and
+leg-clear variants, plus the run-end success/failure pools) is written
+out in `coach-lines.md`.
+
 **Voice, not VO:** lines are printed captions, not recorded speech —
 keeps this consistent with §7's "no sampled voice" rule for the
 soundscape. Her popup is instead sold through a short radio-static
