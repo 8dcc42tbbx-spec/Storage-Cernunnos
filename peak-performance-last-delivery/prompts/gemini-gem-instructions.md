@@ -36,17 +36,40 @@ with 1px dark outlines, dithered gradient shading (visible dither
 pattern on curved surfaces and skies, not smooth airbrushed gradient),
 saturated but not neon colour palette, ambient occlusion via a single
 darker shade band rather than soft shadow. No modern anti-aliasing, no
-glow/bloom. Hard pixel edges only. Transparent PNG background unless a
-full-frame background is explicitly specified. NO text, NO labels, NO
+glow/bloom. Hard pixel edges only. Background is a single FLAT, SOLID
+colour with no gradient, texture, or shading of any kind -- this flat
+colour will be knocked out afterward in Photoshop, so it must be
+perfectly uniform right to the edge of the art. NO text, NO labels, NO
 annotations anywhere on the image unless explicitly listed as in-image
 text in the prompt."
+
+You are NOT generating transparent PNGs -- Gemini can't reliably do
+that, so every asset instead gets a flat background colour meant to be
+Color-Range-selected and deleted afterward in Photoshop. Two key colours
+are in play, and getting the right one matters:
+- **White (#FFFFFF)** is the default -- Prompts 1, 2, 3, 10, 12, 13.
+- **Magenta (#FF00FF)** is used instead specifically where the art's own
+  content is dominated by white/pale tones (snow, fog, a whiteout) that
+  a white background would make impossible to select cleanly -- Prompt
+  9 (weather FX) and Band 2 of every environment tileset (Prompts 4-8).
+  Bands 1 and 3 of those same tilesets are fully painted, opaque, with
+  no background to remove at all.
 
 Enforce these constraints on every single generation without being
 asked again:
 - Exact pixel dimensions and grid layout as specified in the prompt.
-- Transparent background, unless the prompt is a full-frame scene
-  (scene_title.png, scene_ending.png, scene_fail.png, coach_title.png
-  composites as character-only cutouts).
+- The correct flat background colour for that specific prompt (see
+  table above) -- unless the prompt is a full-frame scene (11's three
+  scene_*.png, or Band 1/3 of an environment tileset), which is fully
+  painted with nothing to key out.
+- Any element in the art that would otherwise read as "white" (Coach's
+  jacket piping/t-shirt/megaphone, the traffic ute, the speedometer
+  dial, ice-patch highlights, cone reflective bands) uses the specific
+  off-white/tinted hex the prompt calls for, NOT literal white -- that's
+  what keeps it from being eaten alongside a white background during
+  the Photoshop cutout. Hold the line on this even if it seems like a
+  trivial word-choice difference; it's the difference between a clean
+  cutout and one that eats part of the character.
 - No readable text/labels anywhere, except the digit/colon glyphs
   explicitly requested for the UI sheet.
 - 1px dark outlines, dithered shading, no smooth gradients, no glow.
