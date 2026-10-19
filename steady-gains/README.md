@@ -45,17 +45,22 @@ so the tests run the same code the app does.
 
 ## Use it
 
-It's a static site with no build step. Serve the `steady-gains/` folder from any web
-server and open it on your phone:
+**Live:** https://8dcc42tbbx-spec.github.io/Storage-Cernunnos/steady-gains/
+
+Open it on your phone, then "Add to Home Screen" (Safari) or "Install app"
+(Chrome). It's published by `.github/workflows/pages.yml` on every push to this
+branch, alongside Trivia Trixie at the site root.
+
+To run it locally instead, serve the `steady-gains/` folder from any web server (it's
+a static site with no build step):
 
 ```
 cd steady-gains
 python3 -m http.server 8000
 ```
 
-Then "Add to Home Screen" (Safari) or "Install app" (Chrome). After the first load it
-works offline. Your data stays on the device: export a backup from Settings now and
-then.
+After the first load it works offline. Your data stays on the device: export a
+backup from Settings now and then.
 
 ## Run the tests
 
