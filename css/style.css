@@ -1,0 +1,480 @@
+/* Trivia Trixie the Fabulous Fairy - Stylesheet */
+
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Quicksand:wght@500;600;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --purple-deep: #2b1055;
+    --purple-mid: #5b2a86;
+    --pink-hot: #ff5da2;
+    --gold: #ffd15c;
+    --gold-bright: #ffe28a;
+    --white: #fff8ef;
+    --green-ok: #35d07f;
+    --red-no: #ff5c5c;
+    --card-bg: rgba(255, 248, 239, 0.96);
+    --text-dark: #3a1e5c;
+    --shadow: rgba(20, 5, 40, 0.35);
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Quicksand', 'Trebuchet MS', sans-serif;
+    background: var(--purple-deep);
+    color: var(--text-dark);
+    -webkit-tap-highlight-color: transparent;
+}
+
+button { font-family: inherit; }
+
+#stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------- Background scene layers ---------- */
+#scene-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
+    transition: opacity 0.25s ease;
+    z-index: 0;
+}
+#scene-bg.fading { opacity: 0.25; }
+
+/* Optional ending video (win/lose/perfect). Sits behind #scene-bg's own
+   ::after scrim (below, in source order) so the same text-readability
+   darkening still applies on top of it. Hidden until JS gives it a src
+   and adds .active -- falls back to the static image/gradient otherwise. */
+#ending-video {
+    display: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+#ending-video.active { display: block; }
+
+#scene-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 15%, rgba(255,255,255,0.10), transparent 60%),
+                linear-gradient(to bottom, rgba(20,5,45,0.15), rgba(20,5,45,0.55) 90%);
+    pointer-events: none;
+}
+
+#sparkle-field {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+.sparkle {
+    position: absolute;
+    top: 100%;
+    font-size: 1em;
+    color: var(--gold-bright);
+    opacity: 0;
+    animation: sparkle-float linear infinite;
+    text-shadow: 0 0 6px rgba(255, 226, 138, 0.9);
+}
+@keyframes sparkle-float {
+    0%   { transform: translateY(0) rotate(0deg) scale(0.6); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 0.9; }
+    100% { transform: translateY(-115vh) rotate(200deg) scale(1.1); opacity: 0; }
+}
+
+/* Burst sparkles for correct-answer / win moments */
+.burst-sparkle {
+    position: absolute;
+    color: var(--gold-bright);
+    pointer-events: none;
+    z-index: 20;
+    animation: burst-out 0.9s ease-out forwards;
+    text-shadow: 0 0 8px rgba(255,255,255,0.9);
+}
+@keyframes burst-out {
+    0%   { transform: translate(0,0) scale(0.4) rotate(0deg); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.3) rotate(180deg); opacity: 0; }
+}
+
+#btn-mute {
+    position: absolute;
+    top: max(10px, env(safe-area-inset-top));
+    right: 12px;
+    z-index: 6;
+    width: 36px; height: 36px;
+    font-size: 1.05rem;
+    line-height: 1;
+    background: rgba(43, 16, 85, 0.55);
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    color: var(--white);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 8px var(--shadow);
+    transition: transform 0.12s ease;
+}
+#btn-mute:hover { transform: scale(1.06); }
+#btn-mute:active { transform: scale(0.96); }
+
+/* ---------- Top bar ---------- */
+#topbar {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    /* extra right padding clears the always-on-top mute button */
+    padding: max(12px, env(safe-area-inset-top)) 58px 10px 18px;
+}
+#topbar.hidden { display: none; }
+
+#progress-track {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.progress-dot {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.5);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    transition: transform 0.25s ease, background 0.25s ease;
+}
+.progress-dot.correct { background: var(--green-ok); border-color: #1f9c5a; transform: scale(1.12); }
+.progress-dot.wrong { background: var(--red-no); border-color: #c93f3f; }
+.progress-dot.current { box-shadow: 0 0 0 3px var(--gold-bright); }
+
+#score-badge {
+    background: rgba(43, 16, 85, 0.55);
+    border: 2px solid var(--gold);
+    color: var(--white);
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+/* ---------- Main content ---------- */
+#content {
+    position: relative;
+    z-index: 5;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.screen {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+    animation: screen-in 0.4s ease;
+}
+.screen.hidden { display: none; }
+
+@keyframes screen-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Trixie the fairy host ---------- */
+.trixie-wrap {
+    position: relative;
+    width: 130px; height: 130px;
+    display: flex; align-items: center; justify-content: center;
+    filter: drop-shadow(0 8px 14px var(--shadow));
+}
+.trixie-wrap.small { width: 84px; height: 84px; }
+.trixie-wrap.big { width: 190px; height: 190px; }
+
+.trixie-img { width: 100%; height: 100%; object-fit: contain; display: none; }
+.trixie-fallback {
+    font-size: 5.4em;
+    line-height: 1;
+    animation: trixie-bob 2.6s ease-in-out infinite;
+}
+.trixie-wrap.small .trixie-fallback { font-size: 3.4em; }
+.trixie-wrap.big .trixie-fallback { font-size: 7.6em; }
+
+.trixie-wrap.has-art .trixie-img { display: block; }
+.trixie-wrap.has-art .trixie-fallback { display: none; }
+
+@keyframes trixie-bob {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-8px) rotate(2deg); }
+}
+.trixie-wrap[data-mood="happy"] .trixie-fallback,
+.trixie-wrap[data-mood="happy"] .trixie-img { animation: trixie-happy 0.6s ease; }
+.trixie-wrap[data-mood="laugh"] .trixie-fallback,
+.trixie-wrap[data-mood="laugh"] .trixie-img { animation: trixie-happy 0.6s ease 2; }
+@keyframes trixie-happy {
+    0% { transform: scale(1) rotate(0); }
+    30% { transform: scale(1.18) rotate(-6deg); }
+    60% { transform: scale(1.05) rotate(6deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+.trixie-wrap[data-mood="sad"] .trixie-fallback,
+.trixie-wrap[data-mood="sad"] .trixie-img { animation: trixie-sad 0.7s ease; opacity: 0.9; }
+@keyframes trixie-sad {
+    0% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(6px) rotate(-4deg); }
+    100% { transform: translateY(2px) rotate(0); }
+}
+.trixie-wrap[data-mood="cheer"] .trixie-fallback,
+.trixie-wrap[data-mood="cheer"] .trixie-img { animation: trixie-cheer 1.1s ease-in-out infinite; }
+@keyframes trixie-cheer {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-10px) scale(1.06); }
+}
+.trixie-wrap[data-mood="sleepy"] .trixie-fallback,
+.trixie-wrap[data-mood="sleepy"] .trixie-img { animation: trixie-sleepy 3.6s ease-in-out infinite; }
+@keyframes trixie-sleepy {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-3px) rotate(-3deg); }
+}
+
+/* ---------- Title screen ---------- */
+#title-logo { display: flex; flex-direction: column; align-items: center; }
+.title-logo-img { display: none; max-width: 92%; max-height: 190px; }
+.title-logo-fallback {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 800;
+    font-size: clamp(1.8rem, 6vw, 3rem);
+    color: var(--white);
+    text-shadow: 0 3px 0 var(--pink-hot), 0 6px 18px var(--shadow);
+    letter-spacing: 0.5px;
+}
+#title-logo.has-art .title-logo-img { display: block; }
+#title-logo.has-art .title-logo-fallback { display: none; }
+
+.tagline {
+    color: var(--white);
+    font-size: clamp(0.95rem, 2.4vw, 1.15rem);
+    max-width: 480px;
+    text-shadow: 0 2px 6px var(--shadow);
+}
+
+.btn-primary {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #3a1e5c;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+    border: 3px solid #fff;
+    padding: 14px 38px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #c98f1f, 0 10px 20px var(--shadow);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn-primary:hover { transform: translateY(-2px); }
+.btn-primary:active {
+    transform: translateY(3px);
+    box-shadow: 0 3px 0 #c98f1f, 0 6px 14px var(--shadow);
+}
+
+.btn-secondary {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    padding: 9px 22px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.12s ease;
+}
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.22); transform: translateY(-1px); }
+.btn-secondary:active { transform: translateY(1px); }
+
+/* ---------- Question screen ---------- */
+.category-chip {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #3a1e5c;
+    background: var(--gold-bright);
+    padding: 5px 16px;
+    border-radius: 999px;
+    box-shadow: 0 3px 8px var(--shadow);
+}
+
+.question-card {
+    width: 100%;
+    background: var(--card-bg);
+    border-radius: 24px;
+    padding: 22px 22px 26px;
+    box-shadow: 0 14px 30px var(--shadow);
+    border: 3px solid var(--gold);
+}
+
+#question-counter {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--purple-mid);
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+}
+
+#question-text {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: clamp(1.1rem, 3.4vw, 1.5rem);
+    line-height: 1.35;
+    margin-bottom: 18px;
+    color: var(--text-dark);
+}
+
+#answers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+@media (max-width: 520px) {
+    #answers-grid { grid-template-columns: 1fr; }
+}
+
+.answer-btn {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    text-align: left;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 2.5px solid #d9c8f0;
+    background: #ffffff;
+    color: var(--text-dark);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.answer-btn .opt-letter {
+    flex: none;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--purple-mid);
+    color: #fff;
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+}
+.answer-btn:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--pink-hot); }
+.answer-btn:disabled { cursor: default; }
+
+.answer-btn.correct {
+    background: #e3fbef;
+    border-color: var(--green-ok);
+    animation: pop-correct 0.35s ease;
+}
+.answer-btn.correct .opt-letter { background: var(--green-ok); }
+.answer-btn.wrong {
+    background: #ffecec;
+    border-color: var(--red-no);
+    animation: shake-wrong 0.4s ease;
+}
+.answer-btn.wrong .opt-letter { background: var(--red-no); }
+.answer-btn.dim { opacity: 0.55; }
+
+@keyframes pop-correct {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+}
+@keyframes shake-wrong {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+}
+
+/* ---------- Trixie's speech bubble (title / question / results screens) --
+   A simple white/cream bubble with a small triangular tail pointing up at
+   her, used everywhere she "talks." Text is filled in and revealed by
+   TT.UI.say() (a typewriter effect synced to a talk-blip sound); the bubble
+   stays hidden until she actually has something to say. */
+.speech-bubble {
+    position: relative;
+    display: none;
+    background: var(--card-bg);
+    color: var(--text-dark);
+    border: 2.5px solid var(--purple-mid);
+    border-radius: 16px;
+    padding: 10px 16px;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    max-width: 420px;
+    min-height: 1.4em;
+    box-shadow: 0 6px 14px var(--shadow);
+}
+.speech-bubble:not(:empty) { display: block; }
+.speech-bubble::before {
+    content: "";
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 11px 13px 11px;
+    border-style: solid;
+    border-color: transparent transparent var(--purple-mid) transparent;
+}
+.speech-bubble::after {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 8px 10px 8px;
+    border-style: solid;
+    border-color: transparent transparent var(--card-bg) transparent;
+}
+
+/* ---------- Results screen ---------- */
+#results-heading {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 800;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    color: var(--white);
+    text-shadow: 0 3px 0 var(--pink-hot), 0 6px 18px var(--shadow);
+}
+#results-score {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--gold-bright);
+    text-shadow: 0 2px 6px var(--shadow);
+}
+
+/* Utility */
+.hidden { display: none !important; }
