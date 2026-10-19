@@ -257,7 +257,7 @@ estimated one-rep max (e1RM; §6.6) when a variation changes.
 | # | Exercise | Sets × reps |
 |---|---|---|
 | 1 | Prone DB row | 3 × 12–15 |
-| 2 | Glute bridge (KB on hips) | 3 × 15–20 |
+| 2 | Glute bridge (DB on hips) | 3 × 15–20 |
 | 3 | Seated band lat pulldown | 3 × 12–15 |
 | 4 | Seated DB curl | 2 × 12–15 |
 | 5 | Prone Y-raise | 2 × 12–15 |
@@ -282,7 +282,7 @@ estimated one-rep max (e1RM; §6.6) when a variation changes.
 |---|---|
 | A | Triceps ext. → **close-grip DB press**; shoulder press → **seated Arnold press**; clamshell → **banded glute bridge**; dead bug holds a 2.5 kg DB. |
 | B | Prone row → **prone single-arm row** (1 s pause at top); lat pulldown band level carries over; curl → **hammer curl**; plank → **side plank from knees**. |
-| C | Floor press → **DB bench press (tempo 3-1-1)**; pullover → **KB pullover**; add **prone straight-leg hip extension** 2 × 12–15. |
+| C | Floor press stays (bench is already on day A); pullover → **KB pullover**; add **prone straight-leg hip extension** 2 × 12–15. |
 
 Rep scheme 3 × 10–12 throughout. **Bike:** 2 × 25 min Zone 2.
 
@@ -359,11 +359,19 @@ after session for exercise E:
       nudgeReps(E)                                       # in range → add a rep
 ```
 
-**`nudgeReps`**, the "push but not aggressive" knob: next session's per-set targets are
-last session's reps **+1 on at most two sets**, capped at `hi`.
-Example (range 10–12): last time `12, 11, 10` → next targets `12, 12, 11`.
+**`nudgeReps`**, the "push but not aggressive" knob. Each set's next target is last
+session's reps, capped at `hi`, plus:
+- **spare reps** if you had more in reserve than the session asked for (12 reps at "3+"
+  when RIR 2 was asked → 13), or otherwise
+- **+1**, but only on sets that weren't already harder than asked (a set at RIR 0 or 1
+  when 2 was asked isn't pushed further).
 
-**`increaseLoad`**: move to the next available load (§6.4). Reset reps to `lo`, reset streaks.
+Example (range 10–12, RIR 2 asked, every set at RIR 2): last time `12, 11, 10` → next
+targets `12, 12, 11`.
+
+**`increaseLoad`**: move to the next available load (§6.4) and reset streaks. The
+starting reps at the new weight come from the strength estimate (§6.6), not a flat reset
+to `lo`.
 
 **`decreaseLoad`**: drop one load step (about 10 %), target mid-range reps, reset
 streaks, and record a "stall" against the exercise. Three stalls within a block means the
@@ -373,28 +381,33 @@ A user setting, **Pace**, changes the thresholds:
 
 | Pace | Sessions at top before increasing | Max rep nudge |
 |---|---|---|
-| Gentle (default) | 2 | +1 on 2 sets |
-| Steady | 1 (or 2 if RIR = 1) | +1 on all sets |
-| Easy-going | 3 | +1 on 1 set |
+| Gentle (default) | 2 | +1 per set |
+| Steady | 1 (or 2 if any set was at RIR 1) | +1 per set |
+| Easy-going | 3 | +1 on 2 sets |
+
+> **Why "+1 per set" on Gentle:** each exercise appears once a week and a block is five
+> build weeks. A simulated six-month run showed that +1 on only two sets never reached
+> the top of a 12–15 range within a block, so the weight never went up. The gentleness
+> comes from needing the top twice, the RIR targets, and the cautious jumps below.
 
 ### 6.4 Handling big weight jumps
 
 The next load is the smallest available load above the current one, based on your
-equipment list. If that jump is **more than 15 %** of the current load, the engine
-doesn't jump straight to it. It uses one of two bridges:
+equipment list. The engine predicts your reps there from your strength estimate (at
+RIR 2), then chooses:
 
-**A. Rep extension** (when the jump is 15–35 %): raise `hi` by 2 (once). Only after
-you reach the extended top twice does the weight go up, with targets reset to `lo`.
+| Situation | What happens |
+|---|---|
+| Predicted reps land inside the range | Straight jump; targets = predicted reps. |
+| Jump ≤ 15 %, predicted a little short | Straight jump. The floor drops to `lo − 2` until every set is back in range, so landing at 8 in a 10–12 range isn't a miss. |
+| Jump 15–35 %, predicted short | **Rep extension** first: `hi` + 2, earned twice. Then jump with the relaxed floor. |
+| Jump over 35 %, predicted short | **Step loading**: one set at a time moves to the new weight, e.g. `3 × 5 kg → [7.5, 5, 5] → [7.5, 7.5, 5] → 7.5 kg`. The heavy set's floor is 60 % of `lo`. |
+| Predicted not to manage even one rep | No attempt. The current weight is treated as a **soft ceiling** and climbs the ceiling ladder (§6.5) until the next block tries again. Typical case: KB 7 → 12 kg presses. |
 
-**B. Step loading** (when the jump is over 35 %, e.g. KB 7 → 12 kg, DB 2.5 → 5 kg): move
-one set at a time to the new weight.
-
-```
-3 × 7 kg → [12, 7, 7] → [12, 12, 7] → [12, 12, 12]
-```
-
-Each step needs one "top" session at the new weight before the next set moves over. If the
-new weight is too heavy (a miss), the set drops back to the lower load for that session.
+Each step-loading step needs one "top" session on the heavy sets. Missing the heavy
+set twice cancels the bridge and sets a soft ceiling. Failing a fresh jump twice does
+the same. Deloads and lighter days always use the established weight, never the heavy
+step-loading set.
 
 ### 6.5 Ceiling ladder (when there is no heavier weight)
 
@@ -421,8 +434,14 @@ Each stage resets reps to `lo`. Stages are tracked so progress charts stay meani
   (e.g. floor press ≈ 1.0× bench, Arnold press ≈ 0.85× seated press, single-arm row ≈ 1.0×
   prone row).
 - **Calibration week:** each exercise starts light (the app's suggested default for a new
-  lifter, or your entry). After set 1: RIR 3+ at top reps → +2 steps; RIR 2–3 → +1 step;
-  RIR 0–1 → −1 step. Set 2 confirms. The final load becomes the Block 1 starting weight.
+  lifter, or your entry). After set 1: RIR 3+ at top reps → up (2 steps if that's ≤ 30 %
+  in total, else 1); RIR 2 → stay; RIR 0–1 or below the range → down a step. Set 2
+  confirms. The final set's load becomes the Block 1 starting weight and the baseline
+  for the week-26 retest.
+- **New block:** load is re-picked from the strength estimate for the new range
+  (at most one step either way), and targets start where the estimate says you are, so
+  a new block doesn't wipe out rep progress. Soft ceilings get a fresh try; a lift at
+  the top of the rack keeps its ceiling-ladder stage.
 
 ### 6.7 Session-level adjustments
 
@@ -444,10 +463,13 @@ unit-tested with scenario tables, e.g.:
 - 2 × top sessions → load increases exactly one step.
 - One top session with RIR 3+ → increases immediately.
 - 7.5 → 10 kg (+33 %) → rep extension, not a jump.
-- KB 7 → 12 kg → step loading sequence `[12,7,7] → [12,12,7] → [12,12,12]`.
+- Lateral raise 5 → 7.5 kg → step loading `[7.5,5,5] → [7.5,7.5,5] → 7.5 kg`.
+- KB press 7 → 12 kg with a strength estimate under 12 kg → soft ceiling, no attempt.
 - 20 kg + top twice → ceiling stage 1, not a phantom 22.5 kg.
 - ALR filter never returns an ALR-3 exercise for any settings combination.
 - Ankle flag twice → exercise permanently excluded.
+
+These are implemented in `test/` (run `npm test` in `steady-gains/`).
 
 ---
 
@@ -580,6 +602,7 @@ steady-gains/
   js/
     main.js            # boot, router
     db.js              # IndexedDB wrapper, export/import
+    dates.js           # UTC-safe date helpers
     equipment.js       # available-load maths (DB steps, KB list, band combos)
     library.js         # exercise data (ALR, patterns, alternatives)
     programme.js       # 26-week generator, block templates

@@ -1,0 +1,9 @@
+{
+    "name": "steady-gains",
+    "private": true,
+    "type": "module",
+    "description": "Ankle-safe home-gym strength programme with gentle auto-progression",
+    "scripts": {
+        "test": "node --test"
+    }
+}
