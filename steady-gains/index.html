@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Steady Gains</title>
+    <meta name="description" content="Ankle-safe home-gym strength programme that adjusts to every set you log.">
+    <meta name="theme-color" content="#0f1110">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Steady Gains">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <main id="view" aria-live="polite">
+        <p class="loading">Loading…</p>
+    </main>
+    <div id="restbar" class="restbar" hidden></div>
+    <nav id="tabs" class="tabs" hidden>
+        <a href="#/today" data-tab="today"><span aria-hidden="true">●</span>Today</a>
+        <a href="#/plan" data-tab="plan"><span aria-hidden="true">▦</span>Plan</a>
+        <a href="#/progress" data-tab="progress"><span aria-hidden="true">↗</span>Progress</a>
+        <a href="#/library" data-tab="library"><span aria-hidden="true">≡</span>Exercises</a>
+        <a href="#/settings" data-tab="settings"><span aria-hidden="true">⚙</span>Settings</a>
+    </nav>
+    <noscript>Steady Gains needs JavaScript turned on.</noscript>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -7,22 +7,55 @@ training and app design.
 
 ## Status
 
-**M1 (the "brain") is built**: the pure-logic modules with no UI. Screens come next
-(PLAN.md §10, M2 onwards).
+**Usable.** Milestones M1–M5 from PLAN.md §10 are built: the training logic, every
+screen, on-device storage, offline support and home-screen install.
+
+- **Set-up**: ankle level, schedule, experience, pace, equipment
+- **Today**: what's next, with weights and reps, plus a 10-second check-in (sleep,
+  energy, soreness, ankle)
+- **Session**: pre-filled weight and reps. Tap how many reps you had left to log a set.
+  Also: rest timer with beep/vibrate, swap exercise, "felt it in my ankle", undo,
+  supersets
+- **Summary**: what changes next time and why, new bests, harder-variation offers
+- **Plan**: all 26 weeks, with what's done and skipped
+- **Progress**: strength trend per main lift, weekly volume, week 1 vs now
+- **Exercises**: the full library, with each one's ankle rating and why any are
+  excluded for you
+- **Settings**: change anything (the calendar rebuilds and keeps your logs),
+  restore ankle-paused exercises, export/import a backup, reset
 
 ```
+index.html, sw.js, manifest.webmanifest, css/, icons/
 js/
+  main.js        Controller: routing, taps -> coach calls, rest timer, saving
+  db.js          IndexedDB storage (localStorage fallback)
+  coach.js       Runs sessions: check-in, prescriptions, logging, swaps, summaries
   dates.js       UTC-safe "YYYY-MM-DD" helpers
   equipment.js   Load ladders: dumbbell steps, kettlebells, band combinations
-  library.js     ~55 exercises tagged with Ankle Load Rating, pattern, progression
+  library.js     55 exercises tagged with Ankle Load Rating, pattern, progression
   safety.js      Ankle filter, swaps, ankle-flag suspensions
   engine.js      Progression engine: targets, weight jumps, ceiling ladder, deloads
   programme.js   26-week calendar generator, block templates, validation
-test/            node:test suites for all of the above
+  ui/            One file per screen, plus shared helpers
+test/            node:test suites for everything below the UI
 ```
 
-None of these touch the DOM or storage. They're plain ES modules, so the browser UI
-and the tests import the same code.
+Everything except `main.js`, `db.js` and `ui/` is pure logic with no DOM or storage,
+so the tests run the same code the app does.
+
+## Use it
+
+It's a static site with no build step. Serve the `steady-gains/` folder from any web
+server and open it on your phone:
+
+```
+cd steady-gains
+python3 -m http.server 8000
+```
+
+Then "Add to Home Screen" (Safari) or "Install app" (Chrome). After the first load it
+works offline. Your data stays on the device: export a backup from Settings now and
+then.
 
 ## Run the tests
 

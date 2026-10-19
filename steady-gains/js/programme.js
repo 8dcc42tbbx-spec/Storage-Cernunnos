@@ -180,6 +180,7 @@ export function generateProgramme(profile, equipment, library = LIBRARY) {
                 }
             }
         }
+        sessions.forEach((s, k) => { s.id = "w" + n + "-" + k; });
         weeks.push({ n, ...info, start, sessions });
     }
     return { startDate: profile.startDate, weeks };
@@ -198,7 +199,13 @@ export function insertDeloadWeek(programme, atWeek) {
         sessions: w.sessions.map(s => ({ ...s, date: addDays(s.date, 7) }))
     });
     const template = programme.weeks[i];
-    const deload = { ...template, phase: "deload", mods: { deload: true, rir: 4 }, inserted: true };
+    // Session ids stay stable for the weeks that move, so completed sessions
+    // stay completed; the new week's sessions get ids of their own.
+    const tag = "-d" + (programme.weeks.filter(w => w.inserted).length + 1);
+    const deload = {
+        ...template, phase: "deload", mods: { deload: true, rir: 4 }, inserted: true,
+        sessions: template.sessions.map(s => ({ ...s, id: s.id + tag }))
+    };
     return {
         ...programme,
         weeks: [...programme.weeks.slice(0, i), deload, ...programme.weeks.slice(i).map(shift)]

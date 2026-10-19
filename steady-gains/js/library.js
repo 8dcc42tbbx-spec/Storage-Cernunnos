@@ -245,6 +245,11 @@ export const LIBRARY = [
         cues: ["Pull-apart, chest press, row, Pallof press -- 40 s each, 20 s rest, repeat"] })
 ];
 
+// Exercises done with a dumbbell in each hand: the weight shown is per hand.
+const PAIRS = ["db_bench", "db_floor_press", "db_fly", "cg_db_press", "seated_db_press", "seated_arnold", "seated_lateral",
+    "lying_tri_ext", "prone_db_row", "prone_rear_delt", "prone_y_raise", "seated_db_curl", "seated_hammer", "db_rdl", "standing_db_press"];
+for (const e of LIBRARY) e.pair = PAIRS.includes(e.id);
+
 const BY_ID = new Map(LIBRARY.map(e => [e.id, e]));
 
 export function getExercise(id) {

@@ -41,25 +41,30 @@ const stepFloor = lo => Math.max(3, Math.round(lo * 0.6));
 // ---- Estimates ---------------------------------------------------------
 
 // Epley, with reps in reserve added back so a set stopped at RIR 2 still
-// estimates the same strength as one taken closer to failure.
+// estimates the same strength as one taken closer to failure. Kept at full
+// precision: rounding 7.33 to 7.3 is enough to make 5 kg look too heavy.
+// Round for display only.
 export function e1rm(load, reps, rir = 0) {
     if (!load || !reps) return null;
-    return Math.round(load * (1 + (reps + Math.min(rir, 3)) / 30) * 10) / 10;
+    return load * (1 + (reps + Math.min(rir, 3)) / 30);
 }
 
 // Heaviest available load expected to give `reps` reps at `rir` RIR.
 export function loadForReps(e1rmValue, reps, rir, ladder) {
     if (!e1rmValue || ladder.length === 0) return null;
-    return snapDown(ladder, e1rmValue / (1 + (reps + rir) / 30)).value;
+    // The tolerance stops 11 / 1.4667 = 7.4999... snapping 7.5 kg down to 5.
+    return snapDown(ladder, e1rmValue / (1 + (reps + rir) / 30) + EPS).value;
 }
 
 // Reps expected at `load`, stopping `rir` short of failure (Epley inverted).
 export function predictReps(e1rmValue, load, rir) {
     if (!e1rmValue || !load) return null;
-    return Math.floor(30 * (e1rmValue / load - 1)) - rir;
+    return Math.floor(30 * (e1rmValue / load - 1) + EPS) - rir;
 }
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const E1RM_MAX_DROP = 0.97;
+const EPS = 1e-6;
 
 function sessionBestE1rm(sets) {
     let best = null;
@@ -73,15 +78,17 @@ function sessionBestE1rm(sets) {
 // ---- State creation ----------------------------------------------------
 
 // item = { exerciseId, sets, reps: [lo, hi] } from the programme.
-// refStates lets a new variation borrow strength from a related exercise.
-export function createState(exercise, item, ladder, refStates = {}) {
+// refStates lets a new variation borrow strength from a related exercise;
+// startScale nudges the default starting weight for experience level.
+export function createState(exercise, item, ladder, refStates = {}, startScale = 1) {
     let load = null;
     if (ladder.length > 0) {
         const ref = exercise.loadFactor && refStates[exercise.loadFactor.ref];
         if (ref && ref.e1rm) {
             load = loadForReps(ref.e1rm * exercise.loadFactor.x, item.reps[1], 2, ladder);
         } else {
-            load = snapDown(ladder, exercise.startLoad != null ? exercise.startLoad : ladder[0].value).value;
+            const start = exercise.startLoad != null ? exercise.startLoad * startScale : ladder[0].value;
+            load = snapDown(ladder, start).value;
         }
     }
     return {
@@ -452,11 +459,14 @@ export function updateAfterSession(state, log, ctx) {
     const pace = PACES[ctx.pace] || PACES.gentle;
     const done = log.filter(s => s.completed !== false).sort((a, b) => a.setIndex - b.setIndex);
 
+    // Sets stopped well short of failure with a light weight understate
+    // strength, so one session can only pull the estimate down by 3 %.
+    // Genuine declines still show up as misses and weight drops.
     const best = sessionBestE1rm(done);
     const recorded = {
         ...state,
         lastPerformed: done.length ? today : state.lastPerformed,
-        e1rm: best != null ? best : state.e1rm
+        e1rm: best == null ? state.e1rm : state.e1rm == null || best >= state.e1rm ? best : Math.max(best, state.e1rm * E1RM_MAX_DROP)
     };
 
     if (done.length === 0) return { state: recorded, change: { type: "none", reason: "Not done this time" } };

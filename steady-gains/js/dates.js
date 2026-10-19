@@ -22,6 +22,12 @@ export function daysBetween(fromIso, toIso) {
     return Math.round((toUtc(toIso) - toUtc(fromIso)) / DAY_MS);
 }
 
+// Today's date on the device's own calendar (not UTC), as "YYYY-MM-DD".
+export function localToday(now = new Date()) {
+    const pad = n => String(n).padStart(2, "0");
+    return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+}
+
 export function weekdayOf(iso) {
     return WEEKDAYS[new Date(toUtc(iso)).getUTCDay()];
 }

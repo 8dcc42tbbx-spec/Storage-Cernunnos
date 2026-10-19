@@ -634,6 +634,11 @@ state and dispatch logged sets.
 
 M1–M2 are the minimum to start training with the app; M3–M5 can land during Block 1.
 
+**Status:** M1–M5 are built. `npm test` covers the logic, including a full simulated
+six months. The screens have been driven end to end in Chromium at phone size: set-up,
+calibration, swaps, ankle flags, summaries, progress charts, settings, reload
+persistence, export and offline reload.
+
 ---
 
 ## 11. Assumptions and open questions

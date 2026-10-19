@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { DEFAULT_EQUIPMENT as EQ, loadLadder } from "../js/equipment.js";
 import { getExercise } from "../js/library.js";
 import {
-    e1rm, createState, transitionState, prescribe, prescribeTest, sessionModifiers, volumeLoad,
+    e1rm, loadForReps, predictReps, createState, transitionState, prescribe, prescribeTest, sessionModifiers, volumeLoad,
     shouldHoldIncreases, updateAfterSession, nudgeTargets, calibrationStep, finishCalibration
 } from "../js/engine.js";
 
@@ -27,6 +27,15 @@ function run(s, logs, extra = {}) {
     }
     return { state, change };
 }
+
+test("one easy, light session can't drag the strength estimate down", () => {
+    const s = setup("db_hip_thrust", 7.5, [15, 20]);
+    const strong = { ...s.state, e1rm: 14.7 };
+    const { state } = run({ ...s, state: strong }, [sets(7.5, [15, 15, 15], 2)]); // e1RM 11.75 on its own
+    assert.ok(Math.abs(state.e1rm - 14.7 * 0.97) < 1e-9);
+    const better = run({ ...s, state: strong }, [sets(12.5, [12, 12, 12], 2)]);
+    assert.ok(better.state.e1rm > 14.7);
+});
 
 test("e1rm is Epley with reps in reserve added back", () => {
     assert.equal(e1rm(10, 12, 0), 14);
@@ -343,6 +352,15 @@ test("new block: soft ceilings get another try; the top of the rack keeps its la
     assert.equal(b.tempo, "3-0-1");
 });
 
+test("estimates aren't thrown off by floating-point rounding", () => {
+    const ladder = loadLadder(getExercise("db_bench"), EQ);
+    const est = e1rm(7.5, 12, 2); // 11.0
+    assert.equal(loadForReps(est, 12, 2, ladder), 7.5);
+    assert.equal(predictReps(est, 7.5, 2), 12);
+    // 5 kg x 12 at RIR 2 must still say 5 kg for 12 reps (7.333... not 7.3).
+    assert.equal(loadForReps(e1rm(5, 12, 2), 12, 2, ladder), 5);
+});
+
 test("new variation borrows strength from its reference exercise", () => {
     const ex = getExercise("sa_db_bench");
     const ladder = loadLadder(ex, EQ);
@@ -370,7 +388,7 @@ test("calibration moves up when easy, down when hard, stays when about right", (
     assert.equal(calibrationStep(ladder, 10, 8, 3, [10, 12]), 7.5);
     const done = finishCalibration(createState(getExercise("db_bench"), { sets: 2, reps: [10, 12] }, ladder), { load: 10, reps: 12, rir: 2 }, "2026-10-30");
     assert.deepEqual(done.baseline, { load: 10, reps: 12, date: "2026-10-30" });
-    assert.equal(done.e1rm, 14.7);
+    assert.ok(Math.abs(done.e1rm - 14.6667) < 0.001);
     assert.equal(prescribeTest(done).sets[0].load, 10);
 });
 
