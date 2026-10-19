@@ -1,0 +1,102 @@
+name: Publish to GitHub Pages
+
+# Keeps the public site in sync with the project branches. Pages is served
+# from the gh-pages branch, so this just rebuilds that branch's contents -- it
+# needs only contents:write, not the Pages admin API (which the workflow token
+# isn't allowed to call).
+#
+# There is only one gh-pages slot, so every run assembles the WHOLE site from
+# each project's own branch, whichever branch triggered it:
+#   /                 Trivia Trixie   (claude/trivia-trixie-game-8eba5q)
+#   /steady-gains/    Steady Gains    (claude/weights-exercise-plan-app-uagi0h)
+# This file must be identical on both branches (a push runs the copy on the
+# branch that was pushed). A project whose branch is missing is left out
+# rather than failing the publish.
+
+on:
+  push:
+    branches:
+      - claude/trivia-trixie-game-8eba5q
+      - claude/weights-exercise-plan-app-uagi0h
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-pages
+  cancel-in-progress: true
+
+env:
+  TRIVIA_BRANCH: claude/trivia-trixie-game-8eba5q
+  STEADY_BRANCH: claude/weights-exercise-plan-app-uagi0h
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Trivia Trixie
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: ${{ env.TRIVIA_BRANCH }}
+          path: src-trivia
+
+      - name: Check out Steady Gains
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: ${{ env.STEADY_BRANCH }}
+          path: src-steady
+
+      # Only what each app needs -- no prompt notes, docs or tests.
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          SHORT_SHA="${GITHUB_SHA::8}"
+
+          if [ -f src-trivia/trivia-trixie/index.html ]; then
+            cp src-trivia/trivia-trixie/index.html site/
+            cp -r src-trivia/trivia-trixie/css site/
+            cp -r src-trivia/trivia-trixie/js site/
+            cp -r src-trivia/trivia-trixie/assets site/
+
+            # Cache-bust every local <script src> / <link href> with this
+            # commit's short SHA, so a browser (or GitHub's edge cache) that
+            # already has an old js/css file cached is forced to fetch the new
+            # one instead of silently reusing stale audio/game logic.
+            sed -i -E "s#(src|href)=\"(css|js)/([^\"]+)\"#\1=\"\2/\3?v=${SHORT_SHA}\"#g" site/index.html
+          else
+            echo "::warning::Trivia Trixie branch not found; publishing without it"
+          fi
+
+          if [ -f src-steady/steady-gains/index.html ]; then
+            mkdir -p site/steady-gains
+            cp src-steady/steady-gains/index.html src-steady/steady-gains/sw.js src-steady/steady-gains/manifest.webmanifest site/steady-gains/
+            cp -r src-steady/steady-gains/css src-steady/steady-gains/js src-steady/steady-gains/icons site/steady-gains/
+
+            # Steady Gains caches itself for offline use. A new cache name per
+            # publish makes installed copies pick up the update on next launch.
+            sed -i "s/steady-gains-v1/steady-gains-${SHORT_SHA}/" site/steady-gains/sw.js
+          else
+            echo "::warning::Steady Gains branch not found; publishing without it"
+          fi
+
+          if [ -z "$(ls -A site)" ]; then
+            echo "::error::Nothing to publish"
+            exit 1
+          fi
+          touch site/.nojekyll
+          find site -type f | sort
+
+      - name: Push to gh-pages
+        run: |
+          cd site
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Publish ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
